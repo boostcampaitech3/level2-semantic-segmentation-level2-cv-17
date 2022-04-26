@@ -27,6 +27,8 @@ def save_model(model, saved_dir, file_name):
 def train(num_epochs, model, data_loader, val_loader, criterion, optimizer, saved_dir, device): 
     n_class = 11
     best_loss = 9999999
+    total_loss = 0
+    cnt = 0
     
     for epoch in range(num_epochs):
         model.train()
@@ -47,6 +49,9 @@ def train(num_epochs, model, data_loader, val_loader, criterion, optimizer, save
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            total_loss += loss.item()
+            cnt += 1
             
             outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
             masks = masks.detach().cpu().numpy()
@@ -55,15 +60,15 @@ def train(num_epochs, model, data_loader, val_loader, criterion, optimizer, save
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             
             tqdm_loader.set_postfix({
-                'Loss': round(loss.item(), 4),
+                'Loss': round(total_loss / cnt, 4),
                 'mAcc': round(acc_cls, 4),
                 'mIoU': round(mIoU, 4)
             })
         
-        avg_loss = validation(epoch, model, val_loader, criterion, device)
-        if avg_loss < best_loss:
+        val_loss = validation(epoch, model, val_loader, criterion, device)
+        if val_loss < best_loss:
             print(f"Best performance at epoch {epoch + 1}")
-            best_loss = avg_loss
+            best_loss = val_loss
             save_model(model, saved_dir, file_name='fcn_resnet50_best_model(pretrained).pt')
 
 def validation(epoch, model, data_loader, criterion, device):
@@ -90,26 +95,25 @@ def validation(epoch, model, data_loader, criterion, device):
             
             outputs = model(images)['out']
             loss = criterion(outputs, masks)
-            total_loss += loss
+            total_loss += loss.item()
             cnt += 1
             
             outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
             masks = masks.detach().cpu().numpy()
             
             hist = add_hist(hist, masks, outputs, n_class=n_class)
-        
-            avg_loss = total_loss / cnt
+
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             IoU_by_class = [{cls_name : round(IoU,2)} for IoU, cls_name in zip(IoU, category_names_viz)]
 
             tqdm_loader.set_postfix({
-                'Loss': round(avg_loss.item(), 4),
+                'Loss': round(total_loss / cnt, 4),
                 'mAcc': round(acc_cls, 4),
                 'mIoU': round(mIoU, 4),
-                'cls_IoU': IoU_by_class
+                'IoU': IoU_by_class
             })
         
-    return avg_loss
+    return total_loss / cnt
 
 def main():
     seed = 42
