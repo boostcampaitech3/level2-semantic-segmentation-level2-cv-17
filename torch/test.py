@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torchvision import models
 
 from dataset import CustomDataLoader, collate_fn
-from utils import set_seeds
+from utils import set_seeds, maybe_mkdir
 
 import numpy as np
 import pandas as pd
@@ -98,6 +98,7 @@ def main():
 
     # submission.csv로 저장
     torch_sub_dir = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/submission'
+    maybe_mkdir(torch_sub_dir)
     submission.to_csv(os.path.join(torch_sub_dir, "submission.csv"), index=False)
 
 
