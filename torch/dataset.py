@@ -29,7 +29,7 @@ class CustomDataLoader(Dataset):
         image_infos = self.coco.loadImgs(image_id)[0]
         
         # cv2 를 활용하여 image 불러오기
-        images = cv2.imread(os.path.join('../data', image_infos['file_name']))
+        images = cv2.imread(os.path.join('/opt/ml/input/data', image_infos['file_name']))
         images = cv2.cvtColor(images, cv2.COLOR_BGR2RGB).astype(np.float32)
         images /= 255.0
         

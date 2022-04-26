@@ -62,7 +62,7 @@ def train(num_epochs, model, data_loader, val_loader, criterion, optimizer, save
         
         avg_loss = validation(epoch, model, val_loader, criterion, device)
         if avg_loss < best_loss:
-            print(f"Best performance at epoch {epoch + 1} and Save model in {saved_dir}")
+            print(f"Best performance at epoch {epoch + 1}")
             best_loss = avg_loss
             save_model(model, saved_dir, file_name='fcn_resnet50_best_model(pretrained).pt')
 
@@ -151,7 +151,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(params = model.parameters(), lr = learning_rate, weight_decay=1e-6)
 
-    saved_dir = '/opt/ml/input/code/saved'
+    saved_dir = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/saved'
     maybe_mkdir(saved_dir)
     train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, device)
 
