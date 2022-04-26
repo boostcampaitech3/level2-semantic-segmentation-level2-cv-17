@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision import models
 
+from models.torchvision_models import *
 from dataset import CustomDataLoader, collate_fn
 from utils import label_accuracy_score, add_hist, maybe_mkdir, set_seeds
 
@@ -149,8 +149,7 @@ def main():
     val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, pin_memory=True,
                             shuffle=False, num_workers=8, collate_fn=collate_fn)
 
-    model = models.segmentation.fcn_resnet50(pretrained=True)
-    model.classifier[4] = nn.Conv2d(512, 11, kernel_size=1)
+    model = get_fcn_resnet50()
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(params = model.parameters(), lr = learning_rate, weight_decay=1e-6)
