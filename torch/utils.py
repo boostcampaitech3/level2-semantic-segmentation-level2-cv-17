@@ -114,11 +114,9 @@ def mIoU(pred_mask, mask, classwise=False, smooth=1e-10, n_classes=11):
             true_label = mask == clas
             intersect = torch.logical_and(true_class, true_label).sum().item()
             union = torch.logical_or(true_class, true_label).sum().item()
-            if union > 0:
-                iou = intersect / union
-                iou_per_class.append(iou)
-            elif union == 0:
-                iou_per_class.append(0)
+            
+            iou = (intersect+smooth) / (union+smooth)
+            iou_per_class.append(iou)
         
         if classwise == False:
             return mean(iou_per_class)
