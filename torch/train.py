@@ -1,160 +1,178 @@
 import os
+import os.path as osp
+import argparse
 import warnings
-warnings.filterwarnings('ignore')
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from torchvision import models
-
-from dataset import CustomDataLoader, collate_fn
-from utils import label_accuracy_score, add_hist, maybe_mkdir, set_seeds
-
-import numpy as np
+import wandb
+from torch.optim import *
 from tqdm import tqdm
 
-#!pip install albumentations==0.4.6 ?
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
+from dataset import load_dataset
+from loss import get_loss
+from smp_model import build_model
+from utils import *
+
+warnings.filterwarnings('ignore')
+
+class_labels = {
+    0: "Backgroud",
+    1: "General trash",
+    2: "Paper",
+    3: "Paper pack",
+    4: "Metal",
+    5: "Glass",
+    6: "Plastic",
+    7: "Styrofoam",
+    8: "Plastic bag",
+    9: "Battery",
+    10: "Clothing",
+}
 
 
-def save_model(model, saved_dir, file_name):
-    # check_point = {'net': model.state_dict()}
-    output_path = os.path.join(saved_dir, file_name)
-    torch.save(model, output_path)
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data-dir', default='/opt/ml/input/data')
+    parser.add_argument('--config-dir', type=str, default='./config.yaml')
+    parser.add_argument('--name', type=str, default="test")
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--viz-log', type=int, default=20)
+    parser.add_argument('--metric', action='store_true')
+    parser.add_argument('--loss', action='store_true')
+    parser.add_argument('--save-interval', default=5)
+    parser.add_argument('--work_dir', type=str, default='./work_dirs',
+                        help='the root dir to save logs and models about each experiment')
+    arg = parser.parse_args()
+    return arg
 
-def train(num_epochs, model, data_loader, val_loader, criterion, optimizer, saved_dir, device): 
-    n_class = 11
-    best_loss = 9999999
-    
-    for epoch in range(num_epochs):
-        model.train()
-
-        hist = np.zeros((n_class, n_class))
-        tqdm_loader = tqdm(data_loader, desc=f'Epoch {epoch+1} Train')
-        for step, (images, masks, _) in enumerate(tqdm_loader):
-            images = torch.stack(images)
-            masks = torch.stack(masks).long()
-            
-            images, masks = images.to(device), masks.to(device)
-            model = model.to(device)
-            
-            with torch.cuda.amp.autocast():
-                outputs = model(images)['out']
-                loss = criterion(outputs, masks)
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            
-            outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
-            masks = masks.detach().cpu().numpy()
-            
-            hist = add_hist(hist, masks, outputs, n_class=n_class)
-            acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
-            
-            tqdm_loader.set_postfix({
-                'Loss': round(loss.item(), 4),
-                'mAcc': round(acc_cls, 4),
-                'mIoU': round(mIoU, 4)
-            })
-        
-        avg_loss = validation(epoch, model, val_loader, criterion, device)
-        if avg_loss < best_loss:
-            print(f"Best performance at epoch {epoch + 1} and Save model in {saved_dir}")
-            best_loss = avg_loss
-            save_model(model, saved_dir, file_name='fcn_resnet50_best_model(pretrained).pt')
-
-def validation(epoch, model, data_loader, criterion, device):
-    category_names_viz = ['Back','General','Paper','Paperpack','Metal',
-                          'Glass','Plastic','Styrofoam','Plasticbag','Battery','Cloth']
-    
-    model.eval()
-
-    with torch.no_grad():
-        n_class = 11
-        total_loss = 0
-        cnt = 0
-        
-        hist = np.zeros((n_class, n_class))
-        tqdm_loader = tqdm(data_loader, desc=f'Epoch {epoch+1} Valid')
-        for step, (images, masks, _) in enumerate(tqdm_loader):
-            
-            images = torch.stack(images)
-            masks = torch.stack(masks).long()
-
-            images, masks = images.to(device), masks.to(device)
-            
-            model = model.to(device)
-            
-            outputs = model(images)['out']
-            loss = criterion(outputs, masks)
-            total_loss += loss
-            cnt += 1
-            
-            outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
-            masks = masks.detach().cpu().numpy()
-            
-            hist = add_hist(hist, masks, outputs, n_class=n_class)
-        
-            avg_loss = total_loss / cnt
-            acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
-            IoU_by_class = [{cls_name : round(IoU,2)} for IoU, cls_name in zip(IoU, category_names_viz)]
-
-            tqdm_loader.set_postfix({
-                'Loss': round(avg_loss.item(), 4),
-                'mAcc': round(acc_cls, 4),
-                'mIoU': round(mIoU, 4),
-                'cls_IoU': IoU_by_class
-            })
-        
-    return avg_loss
 
 def main():
-    seed = 42
-    set_seeds(seed)
+    args = get_parser()
+    args = load_config(args)
+    set_seed(args.seed)
 
-    category_names = ['Backgroud','General trash','Paper','Paper pack','Metal',
-                      'Glass','Plastic','Styrofoam','Plastic bag','Battery','Clothing']
+    model, preprocessing_fn = build_model(args)
+    train_loader, val_loader = load_dataset(args, preprocessing_fn)
 
-    batch_size = 16
-    num_epochs = 2
-    learning_rate = 0.0001
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Loss
+    criterion = get_loss(args.criterion)
+    optimizer = Adam(model.parameters(), lr=args.lr)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30, 45], gamma=0.1)
 
-    train_path = '/opt/ml/input/data/train.json'
-    val_path = '/opt/ml/input/data/val.json'
-    train_transform = A.Compose([
-        ToTensorV2()
-    ])
-    val_transform = A.Compose([
-        ToTensorV2()
-    ])
-    train_dataset = CustomDataLoader(train_path, category_names, mode='train', transform=train_transform)
-    val_dataset = CustomDataLoader(val_path, category_names, mode='val', transform=val_transform)
+    # Wandb init
+    wandb.init(project="semantic_segmentation_seonah", entity="mg_generation", name='_'.join([args.work_dir_exp.split('/')[-1],args.encoder,args.decoder]), reinit=True)
+    wandb.config = {
+        "learning_rate": args.lr,
+        "encoder": args.encoder,
+        "epochs": args.epoch,
+        "batch_size": args.batch_size
+    }
+    wandb.watch(model)
 
-    # create own Dataset
-    # train_size = int(0.8*len(dataset))
-    # val_size = int(len(dataset)-train_size)
-    # dataset = CustomDataLoader(data_dir=train_path, mode='train', transform=transform)
-    # train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    device = args.device
+    best_loss = 9999999.0
+    best_score = 0.0
+    
+    for epoch in range(1, args.epoch + 1):
+        model.train()
+        train_loss, train_miou_score, train_accuracy = 0, 0, 0
+        train_f1_score, train_recall, train_precision = 0, 0, 0
+        pbar = tqdm(train_loader, total=len(train_loader), desc=f"Epoch{epoch} : Train")
+        for i, data in enumerate(pbar):
+            image, mask = data
+            image, mask = image.to(device), mask.to(device)
+            output = model(image)
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, pin_memory=True,
-                              shuffle=True, num_workers=8, collate_fn=collate_fn)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, pin_memory=True,
-                            shuffle=False, num_workers=8, collate_fn=collate_fn)
+            optimizer.zero_grad()
+            loss = criterion(output, mask)
+            loss.backward()
+            optimizer.step()
 
-    model = models.segmentation.fcn_resnet50(pretrained=True)
-    model.classifier[4] = nn.Conv2d(512, 11, kernel_size=1)
+            train_loss += loss.item()
+            train_miou_score += mIoU(output, mask)
+            train_accuracy += pixel_accuracy(output, mask)
+            f1_score, recall, precision = get_metrics(output, mask)
+            train_f1_score += f1_score.item()
+            train_recall += recall.item()
+            train_precision += precision.item()
+            pbar.set_postfix(
+                Train_Loss=f" {train_loss/(i+1):.3f}",
+                Train_Iou=f" {train_miou_score/(i+1):.3f}",
+                Train_Acc=f" {train_accuracy/(i+1):.3f}",
+            )
+        wandb.log({
+            'train/loss': train_loss/len(train_loader),
+            'train/miou_score': train_miou_score/len(train_loader),
+            'train/pixel_accuracy': train_accuracy/len(train_loader),
+            'train/train_f1_score': train_f1_score/len(train_loader),
+            'train/train_recall': train_recall/len(train_loader),
+            'train/train_precision': train_precision/len(train_loader),
+        })
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(params = model.parameters(), lr = learning_rate, weight_decay=1e-6)
 
-    saved_dir = '/opt/ml/input/code/saved'
-    maybe_mkdir(saved_dir)
-    train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, device)
+        scheduler.step()
+        val_loss, val_miou_score, val_accuracy = 0, 0, 0
+        val_f1_score, val_recall, val_precision = 0, 0, 0
+        val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"Epoch{epoch} : Val")
+        with torch.no_grad():
+            model.eval()
+            for i, data in enumerate(val_pbar):
+                image, mask = data
+                image, mask = image.to(device), mask.to(device)
+                output = model(image)
 
+                loss = criterion(output, mask)
+                val_loss += loss.item()
+                val_miou_score += mIoU(output, mask)
+                val_accuracy += pixel_accuracy(output, mask)
+                f1_score, recall, precision = get_metrics(output, mask)
+                val_f1_score += f1_score.item()
+                val_recall += recall.item()
+                val_precision += precision.item()
 
-if __name__ == '__main__':
+                val_pbar.set_postfix(
+                    Val_Loss=f" {val_loss / (i + 1):.3f}",
+                    Val_Iou=f" {val_miou_score / (i + 1):.3f}",
+                    Val_Acc=f" {val_accuracy / (i + 1):.3f}",
+                )
+                output = torch.argmax(output, dim=1).detach().cpu().numpy()
+                if args.viz_log == i:
+                    wandb.log({
+                        'visualize': wandb.Image(
+                            image[0, :, :, :],
+                            masks={
+                                "predictions": {
+                                    "mask_data": output[0, :, :],
+                                    "class_labels": class_labels
+                                },
+                                "ground_truth": {
+                                    "mask_data": mask[0, :, :].detach().cpu().numpy(),
+                                    "class_labels": class_labels
+                                }
+                            }
+                        )
+                    })
+            wandb.log({
+                'val/loss': val_loss/len(val_loader),
+                'val/miou_score': val_miou_score/len(val_loader),
+                'val/pixel_accuracy': val_accuracy/len(val_loader),
+                'val/f1_score': val_f1_score/len(val_loader),
+                'val/recall': val_recall/len(val_loader),
+                'val/precision': val_precision/len(val_loader),
+            })
+        # save_model
+        if args.metric:
+            if best_score < val_miou_score:
+                best_score = val_miou_score
+                ckpt_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
+                torch.save(model.state_dict(), ckpt_path)
+        if not args.metric:
+            if best_loss > val_loss:
+                best_loss = val_loss
+                ckpt_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
+                torch.save(model.state_dict(), ckpt_path)
+        if (epoch + 1) % args.save_interval == 0:
+            ckpt_fpath = os.path.join(args.work_dir_exp, 'latest.pth')
+            torch.save(model.state_dict(), ckpt_fpath)
+
+if __name__ == "__main__":
     main()
