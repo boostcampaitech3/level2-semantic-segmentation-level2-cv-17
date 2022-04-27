@@ -101,7 +101,7 @@ def pixel_accuracy(output, mask):
     return accuracy
 
 
-def mIoU(pred_mask, mask, smooth=1e-10, n_classes=11):
+def mIoU(pred_mask, mask, classwise=False, smooth=1e-10, n_classes=11):
     with torch.no_grad():
         pred_mask = F.softmax(pred_mask, dim=1)
         pred_mask = torch.argmax(pred_mask, dim=1)
@@ -109,7 +109,7 @@ def mIoU(pred_mask, mask, smooth=1e-10, n_classes=11):
         mask = mask.contiguous().view(-1)
 
         iou_per_class = []
-        for clas in range(1, n_classes):  # loop per pixel class
+        for clas in range(0, n_classes):  # loop per pixel class
             true_class = pred_mask == clas
             true_label = mask == clas
             intersect = torch.logical_and(true_class, true_label).sum().item()
@@ -117,4 +117,11 @@ def mIoU(pred_mask, mask, smooth=1e-10, n_classes=11):
             if union > 0:
                 iou = intersect / union
                 iou_per_class.append(iou)
-        return mean(iou_per_class)
+            elif union == 0:
+                iou_per_class.append(0)
+        
+        if classwise == False:
+            return mean(iou_per_class)
+        else:
+            return iou_per_class
+

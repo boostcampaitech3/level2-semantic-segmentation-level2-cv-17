@@ -115,6 +115,7 @@ def main():
         scheduler.step()
         val_loss, val_miou_score, val_accuracy = 0, 0, 0
         val_f1_score, val_recall, val_precision = 0, 0, 0
+        val_iou_by_cls = [0] * 11
         val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
         with torch.no_grad():
             model.eval()
@@ -126,6 +127,7 @@ def main():
                 loss = criterion(output, mask)
                 val_loss += loss.item()
                 val_miou_score += mIoU(output, mask)
+                val_iou_by_cls = [x+y for x,y in zip(val_iou_by_cls, mIoU(output, mask, classwise=True))]
                 val_accuracy += pixel_accuracy(output, mask)
                 f1_score, recall, precision = get_metrics(output, mask)
                 val_f1_score += f1_score.item()
@@ -161,7 +163,19 @@ def main():
                 'val/f1_score': val_f1_score/len(val_loader),
                 'val/recall': val_recall/len(val_loader),
                 'val/precision': val_precision/len(val_loader),
+                'cls/0 Background': val_iou_by_cls[0]/len(val_loader),
+                'cls/1 General trash': val_iou_by_cls[1]/len(val_loader),
+                'cls/2 Paper': val_iou_by_cls[2]/len(val_loader),
+                'cls/3 Paper pack': val_iou_by_cls[3]/len(val_loader),
+                'cls/4 Metal': val_iou_by_cls[4]/len(val_loader),
+                'cls/5 Glass': val_iou_by_cls[5]/len(val_loader),
+                'cls/6 Plastic': val_iou_by_cls[6]/len(val_loader),
+                'cls/7 Styrofoam': val_iou_by_cls[7]/len(val_loader),
+                'cls/8 Plastic bag': val_iou_by_cls[8]/len(val_loader),
+                'cls/9 Battery': val_iou_by_cls[9]/len(val_loader),
+                'cls/10 Clothing': val_iou_by_cls[10]/len(val_loader),
             })
+            
         # save_model
         if args.metric:
             if best_score < val_miou_score:
