@@ -11,7 +11,7 @@ from dataset import load_dataset
 from loss import get_loss
 from smp_model import build_model
 from utils import *
-from wandb_setup import wandb_init
+from wandb_setup import *
 
 warnings.filterwarnings('ignore')
 
@@ -60,6 +60,7 @@ def main():
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30, 45], gamma=0.1)
 
     # Wandb init
+    wandb_login()
     wandb_init(args)
     wandb.config = {
         "learning_rate": args.lr,
