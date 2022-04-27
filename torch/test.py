@@ -1,3 +1,4 @@
+import os
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -7,7 +8,7 @@ from torch.utils.data import DataLoader
 from torchvision import models
 
 from dataset import CustomDataLoader, collate_fn
-from utils import set_seeds
+from utils import set_seeds, maybe_mkdir
 
 import numpy as np
 import pandas as pd
@@ -83,7 +84,8 @@ def main():
                              shuffle=False, num_workers=4, collate_fn=collate_fn)
 
     # sample_submisson.csv 열기
-    submission = pd.read_csv('/opt/ml/input/code/submission/sample_submission.csv', index_col=None)
+    sub_dir = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/submission'
+    submission = pd.read_csv(os.path.join(sub_dir, 'sample_submission.csv'), index_col=None)
 
     # test set에 대한 prediction
     file_names, preds = test(model, test_loader, device)
@@ -95,7 +97,9 @@ def main():
             ignore_index=True)
 
     # submission.csv로 저장
-    submission.to_csv("/opt/ml/input/code/submission/submission.csv", index=False)
+    torch_sub_dir = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/submission'
+    maybe_mkdir(torch_sub_dir)
+    submission.to_csv(os.path.join(torch_sub_dir, "submission.csv"), index=False)
 
 
 if __name__ == '__main__':
