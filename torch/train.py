@@ -11,6 +11,7 @@ from dataset import load_dataset
 from loss import get_loss
 from smp_model import build_model
 from utils import *
+from wandb_setup import wandb_init
 
 warnings.filterwarnings('ignore')
 
@@ -59,7 +60,7 @@ def main():
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30, 45], gamma=0.1)
 
     # Wandb init
-    wandb.init(project="semantic_segmentation_seonah", entity="mg_generation", name='_'.join([args.work_dir_exp.split('/')[-1],args.encoder,args.decoder]), reinit=True)
+    wandb_init(args)
     wandb.config = {
         "learning_rate": args.lr,
         "encoder": args.encoder,
@@ -76,7 +77,7 @@ def main():
         model.train()
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
-        pbar = tqdm(train_loader, total=len(train_loader), desc=f"Epoch{epoch} : Train")
+        pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
         for i, data in enumerate(pbar):
             image, mask = data
             image, mask = image.to(device), mask.to(device)
@@ -103,16 +104,17 @@ def main():
             'train/loss': train_loss/len(train_loader),
             'train/miou_score': train_miou_score/len(train_loader),
             'train/pixel_accuracy': train_accuracy/len(train_loader),
-            'train/train_f1_score': train_f1_score/len(train_loader),
-            'train/train_recall': train_recall/len(train_loader),
-            'train/train_precision': train_precision/len(train_loader),
-        })
+            'train/f1_score': train_f1_score/len(train_loader),
+            'train/recall': train_recall/len(train_loader),
+            'train/precision': train_precision/len(train_loader),
+            'learning_rate': scheduler.get_lr()[0],
+        }, commit=False)
 
 
         scheduler.step()
         val_loss, val_miou_score, val_accuracy = 0, 0, 0
         val_f1_score, val_recall, val_precision = 0, 0, 0
-        val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"Epoch{epoch} : Val")
+        val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
         with torch.no_grad():
             model.eval()
             for i, data in enumerate(val_pbar):
@@ -130,9 +132,9 @@ def main():
                 val_precision += precision.item()
 
                 val_pbar.set_postfix(
-                    Val_Loss=f" {val_loss / (i + 1):.3f}",
-                    Val_Iou=f" {val_miou_score / (i + 1):.3f}",
-                    Val_Acc=f" {val_accuracy / (i + 1):.3f}",
+                    Valid_Loss=f" {val_loss / (i + 1):.3f}",
+                    Valid_Iou=f" {val_miou_score / (i + 1):.3f}",
+                    Valid_Acc=f" {val_accuracy / (i + 1):.3f}",
                 )
                 output = torch.argmax(output, dim=1).detach().cpu().numpy()
                 if args.viz_log == i:
@@ -150,7 +152,7 @@ def main():
                                 }
                             }
                         )
-                    })
+                    }, commit=False)
             wandb.log({
                 'val/loss': val_loss/len(val_loader),
                 'val/miou_score': val_miou_score/len(val_loader),

@@ -4,3 +4,5 @@ torch/__pycache__/
 torch/saved/
 torch/submission/
 torch/models/__pycache__/
+torch/wandb/
+torch/work_dirs/
