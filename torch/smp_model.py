@@ -13,6 +13,5 @@ def build_model(args):
         decoder_channels=[256, 128, 64, 32, 16]
     )
     preprocessing_fn = smp.encoders.get_preprocessing_fn(args.encoder, args.encoder_weights)
-    model.to(args.device)
+    
     return model, preprocessing_fn
-
