@@ -1,11 +1,12 @@
 import os
 import cv2
 import numpy as np
+
 import albumentations as albu
-import torch
+from albumentations.pytorch import ToTensorV2
+
 from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
-from albumentations.pytorch import ToTensorV2
 
 dataset_path = '/opt/ml/input/data'
 
@@ -57,9 +58,8 @@ def get_transform():
 #     return albu.Compose(val_transform)
 
 
-# 안씀
-def to_tensor(x, **kwargs):
-    return x.transpose(2, 0, 1).astype('float32')
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 
 def get_preprocessing(preprocessing_fn):
@@ -78,15 +78,6 @@ def get_preprocessing(preprocessing_fn):
         ToTensorV2()
     ]
     return albu.Compose(_transform)
-
-
-# 안 씀
-def one_hot_label(mask, classes: int):
-    n_mask = torch.from_numpy(mask).long()
-    shape = n_mask.shape
-    one_hot = torch.zeros((classes,) + shape[0:])
-    n_mask = one_hot.scatter_(1, n_mask.unsqueeze(0), 1.0)
-    return n_mask
 
 
 class CustomDataLoader(Dataset):
@@ -140,7 +131,7 @@ class CustomDataLoader(Dataset):
                 transformed = self.preprocessing(image=images, mask=masks)
                 images = transformed["image"]
                 masks = transformed["mask"]
-            return images.float(), masks.long(),
+            return images, masks
 
         elif self.mode == 'test':
             # transform -> albumentations 라이브러리 활용
@@ -150,7 +141,7 @@ class CustomDataLoader(Dataset):
             if self.preprocessing:
                 sample = self.preprocessing(image=images)
                 images = sample['image']
-            return images.float()
+            return images, image_infos
 
     def __len__(self) -> int:
         # 전체 dataset의 size를 return
@@ -164,7 +155,8 @@ def load_dataset(args, preprocessing_fn):
                                      transform=train_transform, preprocessing=preprocessing_fn)
     val_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'val.json'), mode='val',
                                    preprocessing=preprocessing_fn)
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_worker,
-                                  drop_last=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_worker)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+                                  pin_memory=True, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+                                pin_memory=True)
     return train_dataloader, val_dataloader
