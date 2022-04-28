@@ -39,6 +39,7 @@ def get_parser():
     parser.add_argument('--config-dir', type=str, default='./config.yaml')
     
     parser.add_argument('--viz-log', type=int, default=20)
+    parser.add_argument('--check_train_data', action='store_true', default=False)
     parser.add_argument('--save-interval', default=5)
     arg = parser.parse_args()
     return arg
@@ -83,6 +84,13 @@ def main():
             masks = torch.stack(masks).long().to(device)
             output = model(images)
 
+            if args.check_train_data:
+                if idx == 0:
+                    batch_train_d = []
+                    for train_img in image:
+                        batch_train_d.append(wandb.Image(train_img))
+                    wandb.log({'train_image':batch_train_d}, commit=False)
+
             optimizer.zero_grad()
             loss = criterion(output, masks)
             loss.backward()
@@ -119,6 +127,7 @@ def main():
         scheduler.step()
         val_loss, val_miou_score, val_accuracy = 0, 0, 0
         val_f1_score, val_recall, val_precision = 0, 0, 0
+        val_iou_by_cls = [0] * 11
         val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
         with torch.no_grad():
             model.eval()

@@ -55,6 +55,7 @@ def concat_config(arg, config):
         config['work_dir_exp'] = exp_dir
         config['viz_log'] = arg.viz_log
         config['save_interval'] = arg.save_interval
+        config['check_train_data'] = arg.check_train_data
 
     else:
         config['exp_name'] = arg.exp_name

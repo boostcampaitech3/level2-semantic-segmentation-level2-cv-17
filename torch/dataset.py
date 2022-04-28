@@ -4,6 +4,8 @@ import numpy as np
 
 from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
+from albumentations.pytorch import ToTensorV2
+import transform
 
 from transform import get_train_transform, get_valid_transform
 
@@ -15,6 +17,10 @@ def get_classname(class_id, cats):
         if cats[i]['id'] == class_id:
             return cats[i]['name']
     return "None"
+
+# 안씀
+def to_tensor(x, **kwargs):
+    return x.transpose(2, 0, 1).astype('float32')
 
 
 class CustomDataLoader(Dataset):
@@ -77,6 +83,8 @@ class CustomDataLoader(Dataset):
         # 전체 dataset의 size를 return
         return len(self.coco.getImgIds())
 
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 def collate_fn(batch):
     return tuple(zip(*batch))
