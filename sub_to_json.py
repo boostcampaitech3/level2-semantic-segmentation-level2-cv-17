@@ -42,7 +42,6 @@ def main(arg):
                 "iscrowd": 0
             })
             n_id += 1
-        time.sleep(0.01)
     print('End conversion.')
     print('saving a json file...')
     with open(arg.dst_json, "w") as json_file:
