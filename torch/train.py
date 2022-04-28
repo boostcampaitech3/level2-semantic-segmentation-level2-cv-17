@@ -39,7 +39,7 @@ def get_parser():
     parser.add_argument('--config-dir', type=str, default='./config.yaml')
     
     parser.add_argument('--viz-log', type=int, default=20)
-    parser.add_argument('--check_train_data', type=bool, action='store_true', default=False)
+    parser.add_argument('--check_train_data', action='store_true', default=False)
     parser.add_argument('--save-interval', default=5)
     arg = parser.parse_args()
     return arg
