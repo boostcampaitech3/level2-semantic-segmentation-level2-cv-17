@@ -1,12 +1,13 @@
 import os
 import cv2
 import numpy as np
-import torch
-import albumentations as albu
+
 from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
 from albumentations.pytorch import ToTensorV2
 import transform
+
+from transform import get_train_transform, get_valid_transform
 
 dataset_path = '/opt/ml/input/data'
 
@@ -22,19 +23,10 @@ def to_tensor(x, **kwargs):
     return x.transpose(2, 0, 1).astype('float32')
 
 
-# 안 씀
-def one_hot_label(mask, classes: int):
-    n_mask = torch.from_numpy(mask).long()
-    shape = n_mask.shape
-    one_hot = torch.zeros((classes,) + shape[0:])
-    n_mask = one_hot.scatter_(1, n_mask.unsqueeze(0), 1.0)
-    return n_mask
-
-
 class CustomDataLoader(Dataset):
     """COCO format"""
-    CLASSES = ['Backgroud', 'General trash', 'Paper', 'Paper pack', 'Metal', 'Glass', 'Plastic', 'Styrofoam',
-               'Plastic bag', 'Battery', 'Clothing']
+    CLASSES = ['Background', 'General trash', 'Paper', 'Paper pack', 'Metal',
+               'Glass', 'Plastic', 'Styrofoam', 'Plastic bag', 'Battery', 'Clothing']
 
     def __init__(self, data_dir, mode='train', transform=None):
         super().__init__()
@@ -94,18 +86,25 @@ class CustomDataLoader(Dataset):
 def collate_fn(batch):
     return tuple(zip(*batch))
 
+def collate_fn(batch):
+    return tuple(zip(*batch))
+
+
 def load_dataset(args, preprocessing_fn):
     data_dir = args.data_dir
-    # train_transform = get_transform()
 
     # transform.py에 있는 custom augmentation 함수 사용
-    train_transform = transform.train_transform(preprocessing_fn)
-    val_transform = transform.valid_transform(preprocessing_fn)
+    train_transform = get_train_transform(preprocessing_fn)
+    val_transform = get_valid_transform(preprocessing_fn)
 
-    train_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'train.json'), mode='train', transform=train_transform)
-    val_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'val.json'), mode='val', transform=val_transform)
+    train_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'train.json'), mode='train',
+                                     transform=train_transform)
+    val_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'val.json'), mode='val',
+                                   transform=val_transform)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_worker,
-                                  drop_last=True, pin_memory=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_worker, pin_memory=True, collate_fn=collate_fn)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+                                  pin_memory=True, collate_fn=collate_fn, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+                                pin_memory=True, collate_fn=collate_fn)
+    
     return train_dataloader, val_dataloader

@@ -12,24 +12,11 @@ A.RandomBrightness(),
 A.CLAHE(),
 A.ColorJitter()     
 
-Elastic Transform??
-
+A.ElasticTransform() ?
 '''
 
-# 여기서 각자 원하는 augmentation 조합을 만들면 됩니다.
-# 나중에 argparser로 관리도 가능할 듯
 
-def train_transform(preprocessing_fn):
-    return A.Compose(
-        [
-            A.Resize(512, 512),
-            A.Lambda(image=preprocessing_fn),
-            ToTensorV2(),
-      
-        ]
-    )
-
-def valid_transform(preprocessing_fn):
+def get_train_transform(preprocessing_fn):
     return A.Compose(
         [
             A.Resize(512, 512),
@@ -38,3 +25,22 @@ def valid_transform(preprocessing_fn):
         ]
     )
 
+
+def get_valid_transform(preprocessing_fn):
+    return A.Compose(
+        [
+            A.Resize(512, 512),
+            A.Lambda(image=preprocessing_fn),
+            ToTensorV2(),
+        ]
+    )
+
+
+def get_test_transform(preprocessing_fn):
+    return A.Compose(
+        [
+            A.Resize(512, 512),
+            A.Lambda(image=preprocessing_fn),
+            ToTensorV2(),
+        ]
+    )
