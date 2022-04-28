@@ -19,7 +19,7 @@ def get_classname(class_id, cats):
 
 class CustomDataLoader(Dataset):
     """COCO format"""
-    CLASSES = ['Backgroud', 'General trash', 'Paper', 'Paper pack', 'Metal',
+    CLASSES = ['Background', 'General trash', 'Paper', 'Paper pack', 'Metal',
                'Glass', 'Plastic', 'Styrofoam', 'Plastic bag', 'Battery', 'Clothing']
 
     def __init__(self, data_dir, mode='train', transform=None):
