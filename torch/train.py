@@ -79,7 +79,8 @@ def main():
         pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
         for idx, data in enumerate(pbar):
             image, mask = data
-            image, mask = image.float().to(device), mask.long().to(device)
+            image = torch.stack(image).float().to(device)
+            mask = torch.stack(mask).long().to(device)
             output = model(image)
 
             optimizer.zero_grad()
@@ -118,13 +119,15 @@ def main():
         scheduler.step()
         val_loss, val_miou_score, val_accuracy = 0, 0, 0
         val_f1_score, val_recall, val_precision = 0, 0, 0
+        val_iou_by_cls = [0] * 11
         val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
         with torch.no_grad():
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             for idx, data in enumerate(val_pbar):
                 image, mask = data
-                image, mask = image.float().to(device), mask.long().to(device)
+                image = torch.stack(image).float().to(device)
+                mask = torch.stack(mask).long().to(device)
                 output = model(image)
 
                 loss = criterion(output, mask)
