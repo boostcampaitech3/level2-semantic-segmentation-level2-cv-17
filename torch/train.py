@@ -39,6 +39,7 @@ def get_parser():
     parser.add_argument('--config-dir', type=str, default='./config.yaml')
     
     parser.add_argument('--viz-log', type=int, default=20)
+    parser.add_argument('--check_train_data', type=bool, action='store_true', default=False)
     parser.add_argument('--save-interval', default=5)
     arg = parser.parse_args()
     return arg
@@ -82,6 +83,13 @@ def main():
             image = torch.stack(image).float().to(device)
             mask = torch.stack(mask).long().to(device)
             output = model(image)
+
+            if args.check_train_data:
+                if idx == 0:
+                    batch_train_d = []
+                    for train_img in image:
+                        batch_train_d.append(wandb.Image(train_img))
+                    wandb.log({'train_image':batch_train_d}, commit=False)
 
             optimizer.zero_grad()
             loss = criterion(output, mask)
