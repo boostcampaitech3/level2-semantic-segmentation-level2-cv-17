@@ -87,7 +87,7 @@ def main():
             if args.check_train_data:
                 if idx == 0:
                     batch_train_d = []
-                    for train_img in image:
+                    for train_img in images:
                         batch_train_d.append(wandb.Image(train_img))
                     wandb.log({'train_image':batch_train_d}, commit=False)
 
