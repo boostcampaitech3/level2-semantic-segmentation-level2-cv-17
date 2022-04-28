@@ -78,23 +78,24 @@ def main():
         hist = np.zeros((args.classes, args.classes))
         pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
         for idx, data in enumerate(pbar):
-            image, mask = data
-            image, mask = image.float().to(device), mask.long().to(device)
-            output = model(image)
+            images, masks = data
+            images = torch.stack(images).float().to(device)
+            masks = torch.stack(masks).long().to(device)
+            output = model(images)
 
             optimizer.zero_grad()
-            loss = criterion(output, mask)
+            loss = criterion(output, masks)
             loss.backward()
             optimizer.step()
 
             train_loss += loss.item()
 
-            hist = add_hist(hist, mask, output, n_class=args.classes)
+            hist = add_hist(hist, masks, output, n_class=args.classes)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             train_miou_score += mIoU
             train_accuracy += acc
 
-            f1_score, recall, precision = get_metrics(output, mask)
+            f1_score, recall, precision = get_metrics(output, masks)
             train_f1_score += f1_score.item()
             train_recall += recall.item()
             train_precision += precision.item()
@@ -123,19 +124,20 @@ def main():
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             for idx, data in enumerate(val_pbar):
-                image, mask = data
-                image, mask = image.float().to(device), mask.long().to(device)
-                output = model(image)
+                images, masks = data
+                images = torch.stack(images).float().to(device)
+                masks = torch.stack(masks).long().to(device)
+                output = model(images)
 
-                loss = criterion(output, mask)
+                loss = criterion(output, masks)
                 val_loss += loss.item()
                 
-                hist = add_hist(hist, mask, output, n_class=args.classes)
+                hist = add_hist(hist, masks, output, n_class=args.classes)
                 acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
                 val_miou_score += mIoU
                 val_accuracy += acc
                 
-                f1_score, recall, precision = get_metrics(output, mask)
+                f1_score, recall, precision = get_metrics(output, masks)
                 val_f1_score += f1_score.item()
                 val_recall += recall.item()
                 val_precision += precision.item()
@@ -149,14 +151,14 @@ def main():
                 if args.viz_log == idx:
                     wandb.log({
                         'visualize': wandb.Image(
-                            image[0, :, :, :],
+                            images[0, :, :, :],
                             masks={
                                 "predictions": {
                                     "mask_data": output[0, :, :],
                                     "class_labels": class_labels
                                 },
                                 "ground_truth": {
-                                    "mask_data": mask[0, :, :].detach().cpu().numpy(),
+                                    "mask_data": masks[0, :, :].detach().cpu().numpy(),
                                     "class_labels": class_labels
                                 }
                             }
