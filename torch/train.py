@@ -40,7 +40,7 @@ def get_parser():
     
     parser.add_argument('--viz_log', type=int, default=20)
     parser.add_argument('--check_train_data', action='store_true', default=False)
-    parser.add_argument('--save_interval', default=5)
+    parser.add_argument('--save_interval', default=10)
     arg = parser.parse_args()
     return arg
 
@@ -208,9 +208,10 @@ def main():
             best_loss_epoch = epoch
             best_loss_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
             torch.save(model.state_dict(), best_loss_path)
-        if (epoch + 1) % args.save_interval == 0:
-            ckpt_fpath = os.path.join(args.work_dir_exp, 'latest.pth')
-            torch.save(model.state_dict(), ckpt_fpath)
+        
+        if epoch % args.save_interval == 0:
+            ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
+            torch.save(model.state_dict(), ckpt_path)
 
         if epoch == args.epoch:
             new_best_score_path = best_score_path[:-4] + f"_epoch{best_score_epoch}.pth"
