@@ -34,13 +34,13 @@ def get_parser():
     parser.add_argument('--split', type=str, default="train")
     parser.add_argument('--seed', type=int, default=42)
 
-    parser.add_argument('--data-dir', default='/opt/ml/input/data')
+    parser.add_argument('--data_dir', default='/opt/ml/input/data')
     parser.add_argument('--work_dir', type=str, default='./work_dirs')
-    parser.add_argument('--config-dir', type=str, default='./config.yaml')
+    parser.add_argument('--config_dir', type=str, default='./config.yaml')
     
-    parser.add_argument('--viz-log', type=int, default=20)
+    parser.add_argument('--viz_log', type=int, default=20)
     parser.add_argument('--check_train_data', action='store_true', default=False)
-    parser.add_argument('--save-interval', default=5)
+    parser.add_argument('--save_interval', default=5)
     arg = parser.parse_args()
     return arg
 
@@ -68,20 +68,20 @@ def main():
     }
     wandb.watch(model)
 
-    device = args.device
     best_loss = 9999999.0
     best_score = 0.0
     
     for epoch in range(1, args.epoch + 1):
-        model.train()
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
+
+        model.train()
         hist = np.zeros((args.classes, args.classes))
         pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
         for idx, data in enumerate(pbar):
             images, masks = data
-            images = torch.stack(images).float().to(device)
-            masks = torch.stack(masks).long().to(device)
+            images = torch.stack(images).float().to(args.device)
+            masks = torch.stack(masks).long().to(args.device)
             output = model(images)
 
             if args.check_train_data:
@@ -95,9 +95,8 @@ def main():
             loss = criterion(output, masks)
             loss.backward()
             optimizer.step()
-
             train_loss += loss.item()
-
+            
             hist = add_hist(hist, masks, output, n_class=args.classes)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             train_miou_score += mIoU
@@ -123,19 +122,19 @@ def main():
             'learning_rate': scheduler.get_lr()[0],
         }, commit=False)
 
-
         scheduler.step()
+
         val_loss, val_miou_score, val_accuracy = 0, 0, 0
         val_f1_score, val_recall, val_precision = 0, 0, 0
-        val_iou_by_cls = [0] * 11
-        val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
+        
         with torch.no_grad():
             model.eval()
             hist = np.zeros((args.classes, args.classes))
+            val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
             for idx, data in enumerate(val_pbar):
                 images, masks = data
-                images = torch.stack(images).float().to(device)
-                masks = torch.stack(masks).long().to(device)
+                images = torch.stack(images).float().to(args.device)
+                masks = torch.stack(masks).long().to(args.device)
                 output = model(images)
 
                 loss = criterion(output, masks)
