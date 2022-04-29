@@ -167,10 +167,7 @@ def main():
                 {cls_name: round(IoU,4)} for IoU, cls_name in zip( IoU, list(class_labels.values()) )
             ]
             for i, cls_name in class_labels.items():
-                if cls_name == 'Clothing':
-                    wandb.log({f'cls/{i} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
-                else:
-                    wandb.log({f'cls/0{i} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
+                wandb.log({f'cls/{str(i).zfill(2)} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
                 
             wandb.log({
                 'val/loss': val_loss / len(val_loader),
