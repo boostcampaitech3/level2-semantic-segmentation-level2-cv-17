@@ -60,12 +60,6 @@ def main():
 
     wandb_login()
     wandb_init(args)
-    wandb.config = {
-        "learning_rate": args.lr,
-        "encoder": args.encoder,
-        "epochs": args.epoch,
-        "batch_size": args.batch_size
-    }
     wandb.watch(model)
 
     best_loss, best_loss_epoch = 9999999.0, 0
@@ -160,23 +154,23 @@ def main():
                     wandb.log({
                         'visualize': wandb.Image(
                             images[0, :, :, :],
-                            masks={
-                                "predictions": {
-                                    "mask_data": output[0, :, :],
-                                    "class_labels": class_labels
-                                },
-                                "ground_truth": {
-                                    "mask_data": masks[0, :, :].detach().cpu().numpy(),
-                                    "class_labels": class_labels
-                                }
+                            masks={"predictions": {"mask_data": output[0, :, :],
+                                                   "class_labels": class_labels},
+                                   "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(),
+                                                    "class_labels": class_labels}
                             }
                         )
                     }, commit=False)
             
             IoU_by_class = [
-                {class_name:round(IoU,4)} for IoU,class_name in zip( IoU, list(class_labels.values()) )
+                {cls_name: round(IoU,4)} for IoU, cls_name in zip( IoU, list(class_labels.values()) )
             ]
-            
+            for i, cls_name in class_labels.items():
+                if cls_name == 'Clothing':
+                    wandb.log({f'cls/{i} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
+                else:
+                    wandb.log({f'cls/0{i} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
+                
             wandb.log({
                 'val/loss': val_loss / len(val_loader),
                 'val/miou_score': val_miou_score / len(val_loader),
@@ -184,17 +178,6 @@ def main():
                 'val/f1_score': val_f1_score / len(val_loader),
                 'val/recall': val_recall / len(val_loader),
                 'val/precision': val_precision / len(val_loader),
-                'cls/0 Background': IoU_by_class[0]['Background'],
-                'cls/1 General trash': IoU_by_class[1]['General trash'],
-                'cls/2 Paper': IoU_by_class[2]['Paper'],
-                'cls/3 Paper pack': IoU_by_class[3]['Paper pack'],
-                'cls/4 Metal': IoU_by_class[4]['Metal'],
-                'cls/5 Glass': IoU_by_class[5]['Glass'],
-                'cls/6 Plastic': IoU_by_class[6]['Plastic'],
-                'cls/7 Styrofoam': IoU_by_class[7]['Styrofoam'],
-                'cls/8 Plastic bag': IoU_by_class[8]['Plastic bag'],
-                'cls/9 Battery': IoU_by_class[9]['Battery'],
-                'cls/10 Clothing': IoU_by_class[10]['Clothing'],
             })
             
         # save_model
