@@ -4,10 +4,11 @@ import warnings
 import wandb
 
 from tqdm import tqdm
-from torch.optim import *
 
 from dataset import load_dataset
 from loss import get_loss
+from optimizer import get_optimizer
+from scheduler import get_scheduler
 from smp_model import build_model
 from utils import *
 from wandb_setup import wandb_login, wandb_init
@@ -55,8 +56,8 @@ def main():
     model.to(args.device)
     
     criterion = get_loss(args.criterion)
-    optimizer = Adam(model.parameters(), lr=args.lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30, 45], gamma=0.1)
+    optimizer = get_optimizer(args.optimizer, model.parameters(), args.lr, args.scheduler)
+    scheduler = get_scheduler(args.scheduler, optimizer, args.epoch)
 
     wandb_login()
     wandb_init(args)
@@ -66,6 +67,7 @@ def main():
     best_score, best_score_epoch = 0.0, 0
     
     for epoch in range(1, args.epoch + 1):
+        # train
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
 
@@ -113,15 +115,14 @@ def main():
             'train/f1_score': train_f1_score / len(train_loader),
             'train/recall': train_recall / len(train_loader),
             'train/precision': train_precision / len(train_loader),
-            'learning_rate': scheduler.get_lr()[0],
         }, commit=False)
-
-        scheduler.step()
-
-        val_loss, val_miou_score, val_accuracy = 0, 0, 0
-        val_f1_score, val_recall, val_precision = 0, 0, 0
         
+
+        # valid
         with torch.no_grad():
+            val_loss, val_miou_score, val_accuracy = 0, 0, 0
+            val_f1_score, val_recall, val_precision = 0, 0, 0
+
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
@@ -178,8 +179,18 @@ def main():
                 'val/f1_score': val_f1_score / len(val_loader),
                 'val/recall': val_recall / len(val_loader),
                 'val/precision': val_precision / len(val_loader),
-            })
-            
+            }, commit=False)
+        
+        wandb.log({
+            'learning_rate': scheduler.optimizer.param_groups[0]['lr']
+        })
+
+        # scheduler step
+        if args.scheduler == 'reduce':
+            scheduler.step(val_loss / len(val_loader))
+        else:
+            scheduler.step()
+
         # save_model
         if best_score < val_miou_score:
             best_score = val_miou_score
