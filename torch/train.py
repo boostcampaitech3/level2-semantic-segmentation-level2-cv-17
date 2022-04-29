@@ -68,8 +68,8 @@ def main():
     }
     wandb.watch(model)
 
-    best_loss = 9999999.0
-    best_score = 0.0
+    best_loss, best_loss_epoch = 9999999.0, 0
+    best_score, best_score_epoch = 0.0, 0
     
     for epoch in range(1, args.epoch + 1):
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
@@ -200,15 +200,24 @@ def main():
         # save_model
         if best_score < val_miou_score:
             best_score = val_miou_score
-            ckpt_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
-            torch.save(model.state_dict(), ckpt_path)
+            best_score_epoch = epoch
+            best_score_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
+            torch.save(model.state_dict(), best_score_path)
         if best_loss > val_loss:
             best_loss = val_loss
-            ckpt_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
-            torch.save(model.state_dict(), ckpt_path)
+            best_loss_epoch = epoch
+            best_loss_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
+            torch.save(model.state_dict(), best_loss_path)
         if (epoch + 1) % args.save_interval == 0:
             ckpt_fpath = os.path.join(args.work_dir_exp, 'latest.pth')
             torch.save(model.state_dict(), ckpt_fpath)
+
+        if epoch == args.epoch:
+            new_best_score_path = best_score_path[:-4] + f"_epoch{best_score_epoch}.pth"
+            new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
+            os.rename(best_score_path, new_best_score_path)
+            os.rename(best_loss_path, new_best_loss_path)
+
 
 if __name__ == "__main__":
     main()
