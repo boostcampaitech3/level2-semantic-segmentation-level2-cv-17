@@ -1,12 +1,8 @@
-import os
 import cv2
-import numpy as np
 
-from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
-from albumentations.pytorch import ToTensorV2
-import transform
 
+from utils import *
 from transform import get_train_transform, get_valid_transform
 
 dataset_path = '/opt/ml/input/data'
@@ -18,12 +14,8 @@ def get_classname(class_id, cats):
             return cats[i]['name']
     return "None"
 
-# 안씀
-def to_tensor(x, **kwargs):
-    return x.transpose(2, 0, 1).astype('float32')
 
-
-class CustomDataLoader(Dataset):
+class CustomDataLoader(torch.utils.data.Dataset):
     """COCO format"""
     CLASSES = ['Background', 'General trash', 'Paper', 'Paper pack', 'Metal',
                'Glass', 'Plastic', 'Styrofoam', 'Plastic bag', 'Battery', 'Clothing']
@@ -83,8 +75,6 @@ class CustomDataLoader(Dataset):
         # 전체 dataset의 size를 return
         return len(self.coco.getImgIds())
 
-def collate_fn(batch):
-    return tuple(zip(*batch))
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -102,9 +92,11 @@ def load_dataset(args, preprocessing_fn):
     val_dataset = CustomDataLoader(data_dir=os.path.join(data_dir, 'val.json'), mode='val',
                                    transform=val_transform)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
-                                  pin_memory=True, collate_fn=collate_fn, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
-                                pin_memory=True, collate_fn=collate_fn)
+    train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+            pin_memory=True, collate_fn=collate_fn, shuffle=True)
+    val_dataloader = torch.utils.data.DataLoader(
+            val_dataset, batch_size=args.batch_size, num_workers=args.num_worker,
+            pin_memory=True, collate_fn=collate_fn)
     
     return train_dataloader, val_dataloader
