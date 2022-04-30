@@ -1,11 +1,11 @@
-epoch: 5
+epoch: 100
 batch_size: 8
 num_worker: 8
 classes: 11
 lr: 0.0001
 decoder: UnetPlusPlus # Unet, UnetPlusPlus, DeepLabV3, DeepLabV3Plus
-encoder: timm-efficientnet-b4 # Segmentation Model 보는게 더 빠름
+encoder: timm-efficientnet-b4
 encoder_weights: imagenet # imagenet / advprop / noisy-student
-criterion: focal # dice / CE / focal / softCE
-optimizer: AdamW # Adam / AdamW / SGD
+criterion: dice # dice / CE / focal / softCE
+optimizer: Adam # Adam / AdamW / SGD
 scheduler: multistep # multistep / reduce / cosign

@@ -15,6 +15,8 @@ def wandb_init(args):
             "decoder": args.decoder,
             
             "criterion": args.criterion,
+            "optimizer": args.optimizer,
+            "scheduler": args.scheduler,
 
             "epochs": args.epoch,
             "learning_rate": args.lr,
