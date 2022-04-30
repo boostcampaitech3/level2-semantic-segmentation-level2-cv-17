@@ -3,7 +3,7 @@ batch_size: 8
 num_worker: 8
 classes: 11
 lr: 0.0001
-decoder: UnetPlusPlus # Unet, UnetPlusPlus, DeepLabV3, DeepLabV3Plus
+decoder: UnetPlusPlus # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
 encoder: timm-efficientnet-b4
 encoder_weights: imagenet # imagenet / advprop / noisy-student
 criterion: dice # dice / CE / focal / softCE
