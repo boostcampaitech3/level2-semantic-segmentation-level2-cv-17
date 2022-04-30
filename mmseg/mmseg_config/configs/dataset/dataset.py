@@ -44,7 +44,7 @@ test_pipeline = [
         dict(type='LoadImageFromFile'),
         dict(
             type='MultiScaleFlipAug',
-            img_scale=[(1024, 1024),(512,512),(1333,800)],
+            img_scale=[(512,512)],#[(1024, 1024),(512,512),(1333,800)],
             flip= False,
             flip_direction =  ["horizontal", "vertical" ,"diagonal"],
             transforms=[
@@ -57,7 +57,7 @@ test_pipeline = [
             ])
     ]
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=8,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,

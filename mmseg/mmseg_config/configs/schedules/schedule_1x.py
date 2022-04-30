@@ -1,7 +1,7 @@
 # optimizer
 optimizer = dict(type='AdamW',
-                lr=0.0001,
-                weight_decay=0.001,
+                lr=0.001,
+                weight_decay=0.0001,
                 paramwise_cfg=dict(
                 custom_keys={
                 'absolute_pos_embed': dict(decay_mult=0.),
@@ -20,4 +20,4 @@ lr_config = dict(
         warmup_ratio=0.01,
         min_lr=1e-05,
     )
-runner = dict(type='EpochBasedRunner', max_epochs=20)
+runner = dict(type='EpochBasedRunner', max_epochs=100)
