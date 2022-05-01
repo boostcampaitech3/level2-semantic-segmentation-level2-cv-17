@@ -44,6 +44,8 @@ def parse_args():
         'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
         'Note that the quotation marks are necessary and that no white space '
         'is allowed.')
+    
+    parser.add_argument('--remark', type=str, help='uniqueness of submission file when testing (EX) TTA ')
 
     args = parser.parse_args()
 
@@ -67,10 +69,11 @@ def main():
 
     # if you want to use TTA 
     if args.aug_test:
-        # hard code index
-        cfg.data.test.pipeline[1].img_ratios = [
-            0.5, 0.75, 1.0, 1.25, 1.5, 1.75
-        ]
+        # hard code index 
+        # cfg.data.test.pipeline[1].img_ratios = [
+        #     0.5, 0.75, 1.0, 1.25, 1.5, 1.75
+        # ]
+        # cfg.data.test.pipeline[1].img_scale = [(1024, 1024),(512,512),(1333,800)]
         cfg.data.test.pipeline[1].flip = True
 
     cfg.model.pretrained = None
@@ -152,8 +155,13 @@ def main():
     submission['PredictionString'] = prediction_strings
  
 
-    sub_name = args.checkpoint[:-4] + '.csv'
+    
+    if args.remark:
+        sub_name = args.checkpoint[:-4] +'_'+ args.remark +'.csv'
+    else:
+        sub_name = args.checkpoint[:-4] + '.csv'
     submission_path = os.path.join(checkpoint_root,sub_name)
+
     submission.to_csv(submission_path, index=False)
 
 

@@ -90,7 +90,7 @@ the key options (Korean)
 ### test usage
 
 ```
-usage: test.py [-h] [--aug-test] [--cfg-options CFG_OPTIONS [CFG_OPTIONS ...]] config checkpoint
+usage: test.py [-h] [--aug-test] [--cfg-options CFG_OPTIONS [CFG_OPTIONS ...]] [--remark REMARK] config checkpoint
 
 mmseg test (and eval) a model
 
@@ -107,6 +107,7 @@ optional arguments:
                         like key="[a,b]" or key=a,b It also allows nested list/tuple values, e.g.
                         key="[(a,b),(c,d)]" Note that the quotation marks are necessary and that no white
                         space is allowed.
+  --remark REMARK       uniqueness of submission file when testing (EX) TTA
 ```
 
 ### the key options (Korean)
