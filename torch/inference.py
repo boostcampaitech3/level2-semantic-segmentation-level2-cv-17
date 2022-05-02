@@ -32,6 +32,7 @@ def get_parser():
 
 
 def main(args):
+    args = get_parser()
     args = load_config(args)
     set_seed(args.seed)
     
@@ -84,5 +85,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = get_parser()
-    main(args)
+    main()

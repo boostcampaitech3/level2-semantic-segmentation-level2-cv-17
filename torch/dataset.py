@@ -87,7 +87,7 @@ def load_dataset(args, preprocessing_fn):
     if args.fold != -1:
         train_json_dir = os.path.join(args.data_dir, f"train_fold{args.fold}.json")
         val_json_dir = os.path.join(args.data_dir, f"val_fold{args.fold}.json")
-    else:
+    else: # use base train, val
         train_json_dir = os.path.join(args.data_dir, "train.json")
         val_json_dir = os.path.join(args.data_dir, "val.json")
     

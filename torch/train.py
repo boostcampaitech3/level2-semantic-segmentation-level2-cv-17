@@ -189,22 +189,25 @@ def main(args):
     args.dst_config = os.path.join(args.work_dir_exp, args.dst_config)
 
     if args.sweep:
-        wandb_run = sweep_init(args)
+        sweep_init(args)
         args = concat_config(args, wandb.config) # args + wandb.config = args
     else:
         base_config = load_config(args)
         args = concat_config(args, base_config) # args + base_config = args
 
+    # all changes saved in args
     args, (model, preprocessing_fn) = build_model(args) # smp_model.py
     _, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
     _, criterion = get_loss(args) # loss.py
     args, optimizer = get_optimizer(args, model.parameters()) # optimizer.py
     args, scheduler = get_scheduler(args, optimizer) # scheduler.py
     
-    # all changes saved in args and logged on wandb config
-    if args.sweep: wandb.config = args.__dict__
-    else: wandb_init(args)
-    save_config(args)
+    # args logged on wandb config
+    if args.sweep:
+        wandb.config = args.__dict__
+    else:
+        wandb_init(args)
+    save_config(args) # args saved on train_config.yaml
 
     do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler)
     if args.sweep: wandb.finish()

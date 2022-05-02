@@ -1,7 +1,7 @@
 classes: 11
 num_worker: 8
 
-fold: 0
+fold: 0 # fold=-1 means base train, val
 lr: 0.0001
 epoch: 1
 batch_size: 8
