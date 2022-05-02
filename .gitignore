@@ -1,7 +1,7 @@
 mmseg/mmseg_config/work_dirs/
 mmseg/mmsegmentation/
 mmseg/mmseg_config/wandb/
-mmseg/mmseg_config/configs/
+# mmseg/mmseg_config/configs/
 mmseg/mmseg_config/__pycache__/
 mmseg/mmseg_config/my_pickle.py
 __pycache__/
