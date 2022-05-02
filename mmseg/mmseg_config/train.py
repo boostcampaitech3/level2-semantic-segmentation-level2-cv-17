@@ -115,11 +115,12 @@ def main():
     cfg.log_config['hooks'][1]['init_kwargs']['tags'] = args.tags #args를 그냥 보내서 바뀐 것들은 이걸로 표현해도 나쁘진 않을 듯.
     cfg.log_config['hooks'][1]['init_kwargs']['name'] = work_dir.split('/')[-1]
 
+    cfg.log_config['hooks'][1]['init_kwargs']['config'] = cfg   
+
     if args.debug : # args.wandb is False -> wandb don't work maybe default = True
         cfg.log_config['hooks']=[dict(type='TextLoggerHook')]
         cfg.runner['max_epochs']=2
 
-    cfg.log_config['hooks'][1]['init_kwargs']['config'] = cfg   
 
     model = build_segmentor(
         cfg.model,
