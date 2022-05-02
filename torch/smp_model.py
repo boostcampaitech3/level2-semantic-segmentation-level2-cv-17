@@ -94,7 +94,7 @@ def build_model(args):
             args['encoder_output_stride'] = 16
             args['decoder_channels'] = 256
             args['decoder_atrous_rates'] = (12, 24, 36)
-            args['upsampling'] = 8
+            args['upsampling'] = 4
         model = decoder(
             classes=args.classes,
             encoder_name=args.encoder,

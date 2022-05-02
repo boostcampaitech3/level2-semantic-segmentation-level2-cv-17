@@ -47,7 +47,7 @@ def get_parser():
     parser.add_argument('--wandb-remark', type=str, default='', help='this will be added in wandb run name')
 
     parser.add_argument('--sweep', action='store_true', default=False, help='sweep option')
-    parser.add_argument('--sweep-name', type=str, default='str', help='this will be sweep name and also run group name')
+    parser.add_argument('--sweep-name', type=str, default='sweep', help='this will be sweep name and also run group name')
 
     args = parser.parse_args()
     args.src_config = os.path.join(os.getcwd(), args.src_config) # maybe do not change
