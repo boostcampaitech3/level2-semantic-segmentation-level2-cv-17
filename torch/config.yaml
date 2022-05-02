@@ -3,7 +3,7 @@ num_worker: 8
 
 fold: 0 # fold=-1 means base train, val
 lr: 0.0001
-epoch: 1
+epoch: 20
 batch_size: 8
 
 decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
@@ -13,6 +13,6 @@ encoder_weights: imagenet # imagenet / advprop / noisy-student
 activation: None
 aux_params: None
 
-criterion: dice # dice / CE / focal
+criterion: dice # CE / jaccard / dice / tversky / focal / lovasz / softCE
 optimizer: Adam # Adam / AdamW / SGD
 scheduler: multistep # multistep / reduce / cosign

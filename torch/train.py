@@ -197,8 +197,8 @@ def main(args):
 
     # all changes saved in args
     args, (model, preprocessing_fn) = build_model(args) # smp_model.py
-    _, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
-    _, criterion = get_loss(args) # loss.py
+    args, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
+    args, criterion = get_loss(args) # loss.py
     args, optimizer = get_optimizer(args, model.parameters()) # optimizer.py
     args, scheduler = get_scheduler(args, optimizer) # scheduler.py
     
