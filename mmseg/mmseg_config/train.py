@@ -35,9 +35,10 @@ def parse_args():
         '--no-validate',
         action='store_true',
         help='whether not to evaluate the checkpoint during training')
-        
-    parser.add_argument('--no-wandb', dest = 'wandb',  action='store_false')
-    parser.set_defaults(wandb=True)
+
+    parser.add_argument('--debug', dest = 'debug',  action='store_true', help = 'Debug mode which do not run wandb and epoch 2 ')
+    parser.set_defaults(debug=False)
+
     parser.add_argument('--seed', type=int, default=42, help='random seed')
     parser.add_argument('--tags', nargs='+', default=[],
         help ='record your experiment speical keywords into tags list'
@@ -114,8 +115,9 @@ def main():
     cfg.log_config['hooks'][1]['init_kwargs']['tags'] = args.tags #args를 그냥 보내서 바뀐 것들은 이걸로 표현해도 나쁘진 않을 듯.
     cfg.log_config['hooks'][1]['init_kwargs']['name'] = work_dir.split('/')[-1]
 
-    if not args.wandb : # args.wandb is False -> wandb don't work maybe default = True
+    if args.debug : # args.wandb is False -> wandb don't work maybe default = True
         cfg.log_config['hooks']=[dict(type='TextLoggerHook')]
+        cfg.runner['max_epochs']=2
 
     cfg.log_config['hooks'][1]['init_kwargs']['config'] = cfg   
 

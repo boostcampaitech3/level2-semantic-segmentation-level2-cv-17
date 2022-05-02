@@ -31,7 +31,7 @@ This script convert model from PRETRAIN_PATH and store the converted model in ST
 ### train usage
 ```
 usage: train.py [-h] [--work-dir WORK_DIR] [--load-from LOAD_FROM] [--resume-from RESUME_FROM]
-                [--no-validate] [--no-wandb] [--seed SEED] [--tags TAGS [TAGS ...]]
+                [--no-validate] [--debug] [--seed SEED] [--tags TAGS [TAGS ...]]
                 [--cfg-options CFG_OPTIONS [CFG_OPTIONS ...]] [--auto-resume]
                 config
 
@@ -50,7 +50,7 @@ optional arguments:
                         the checkpoint file to resume from, When training is interrupted somehow,
                         resume_from should be used to resume training.
   --no-validate         whether not to evaluate the checkpoint during training
-  --no-wandb
+  --debug               Debug mode which do not run wandb and epoch 2 
   --seed SEED           random seed
   --tags TAGS [TAGS ...]
                         record your experiment speical keywords into tags list--tags batch_size=16
@@ -76,6 +76,7 @@ the key options (Korean)
 - load-from : 학습된 segmentor의 weights를 load해주고 싶다면 load해주시면 됩니다.
 - resume-from : 학습을 중간에 중단해 저장된 체크포인트로부터 다시 학습을 재개하고 싶을 때 사용하시면 됩니다.
 - * load와 resume의 차이점은 load는 fine-tunning처럼 학습되는 방식이라면, resume은 저장된 체크포인트 상태에서 바로 다시 재개하는 방식입니다.
+- debug : 디버그 모드를 실행시키시면, wandb도 실행되지 않고, max epoch이 2로 설정되어 valid와 train에서 의도대로 동작하는지를 간단히 확인할 수 있습니다. 
 
 ### options & cfg-options usage
 해당 사용 내용은 help에 자세하게 적혀 있습니다. 간단히 적자면 cfg dict의 값들에 접근해서 config의 옵션을 command line에서 바꿔주기 위한 설정들입니다. 

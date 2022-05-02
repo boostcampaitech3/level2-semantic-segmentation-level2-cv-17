@@ -45,8 +45,12 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         # ignore_index=0,
-        loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0 ,)),#avg_non_ignore=True)),
+        loss_decode=[
+            dict(type='FocalLoss',loss_name='loss_focal' ,use_sigmoid=False, loss_weight=1.0),
+            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=1.0)]
+            
+            ),#avg_non_ignore=True)),
+
     auxiliary_head=dict(
         type='FCNHead',
         in_channels=768,
@@ -60,7 +64,7 @@ model = dict(
         align_corners=False,
         # ignore_index=0,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4,)),# avg_non_ignore=True)),
+            type='FocalLoss', use_sigmoid=False, loss_weight=0.4,)),# avg_non_ignore=True)),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
