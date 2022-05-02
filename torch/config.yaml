@@ -13,6 +13,6 @@ encoder_weights: imagenet # imagenet / advprop / noisy-student
 activation: None
 aux_params: None
 
-criterion: dice # dice / CE / focal / softCE
+criterion: dice # dice / CE / focal
 optimizer: Adam # Adam / AdamW / SGD
 scheduler: multistep # multistep / reduce / cosign

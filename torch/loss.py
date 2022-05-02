@@ -8,7 +8,5 @@ def get_loss(args):
         criterion = torch.nn.CrossEntropyLoss()
     elif args.criterion == 'focal':
         criterion = smp.losses.FocalLoss('multiclass')
-    elif args.criterion == 'softCE':
-        criterion = smp.losses.SoftCrossEntropyLoss('multiclass')
     
     return args, criterion
