@@ -31,7 +31,7 @@ def get_parser():
     return args
 
 
-def main(args):
+def main():
     args = get_parser()
     args = load_config(args)
     set_seed(args.seed)
