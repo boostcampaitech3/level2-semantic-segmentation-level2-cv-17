@@ -70,9 +70,11 @@ def main():
     # if you want to use TTA 
     if args.aug_test:
         # hard code index 
-        # cfg.data.test.pipeline[1].img_ratios = [
-        #     0.5, 0.75, 1.0, 1.25, 1.5, 1.75
-        # ]
+        cfg.data.test.pipeline[1].img_ratios = [
+            # 0.5, 
+            0.75, 1.0, 1.25, 1.5
+            # , 1.75
+        ]
         # cfg.data.test.pipeline[1].img_scale = [(1024, 1024),(512,512),(1333,800)]
         cfg.data.test.pipeline[1].flip = True
 

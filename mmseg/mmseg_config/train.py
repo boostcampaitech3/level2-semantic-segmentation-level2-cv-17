@@ -117,6 +117,7 @@ def main():
     if not args.wandb : # args.wandb is False -> wandb don't work maybe default = True
         cfg.log_config['hooks']=[dict(type='TextLoggerHook')]
 
+    cfg.log_config['hooks'][1]['init_kwargs']['config'] = cfg   
 
     model = build_segmentor(
         cfg.model,

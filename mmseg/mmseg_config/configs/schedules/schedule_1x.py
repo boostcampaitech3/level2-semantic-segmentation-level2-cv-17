@@ -1,6 +1,6 @@
 # optimizer
 optimizer = dict(type='AdamW',
-                lr=0.001,
+                lr=0.00006,
                 weight_decay=0.0001,
                 paramwise_cfg=dict(
                 custom_keys={
