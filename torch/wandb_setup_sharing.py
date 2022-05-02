@@ -8,24 +8,24 @@ def wandb_login():
     wandb.login(key=api_key)
 
 def wandb_init(args):
-    wandb_name = [args.work_dir_exp.split('/')[-1], args.encoder, args.decoder]
-    if args.wandb_remark != '':
-        wandb_name.append(args.wandb_remark)
     wandb.init(
         project=project_name,
         entity="mg_generation",
-        name='_'.join(wandb_name),
+        name=get_wandb_run_name(args),
         tags=['torch'],
         reinit=True,
         config=args.__dict__,
     )
 
-def sweep_init(args):
-    wandb_name = [args.work_dir_exp.split('/')[-1]]
+def get_wandb_run_name(args):
+    wandb_name = [args.work_dir_exp.split('/')[-1], args.encoder, args.decoder]
     if args.wandb_remark != '':
         wandb_name.append(args.wandb_remark)
+    return '_'.join(wandb_name)
+
+def sweep_init(args):
     wandb.init(
-        name='_'.join(wandb_name),
+        name=args.work_dir_exp.split('/')[-1],
         group=args.sweep_name,
         tags=['torch'],
         reinit=True,
@@ -43,7 +43,7 @@ def get_sweep_config(args):
     # you must read this : https://docs.wandb.ai/guides/sweeps/configuration
     sweep_cfg = dict(
         name=args.sweep_name,
-        method='bayes',
+        method='grid',
         metric=dict(
             name='val/miou_score',
             goal='maximize'
@@ -53,9 +53,9 @@ def get_sweep_config(args):
             classes=dict(values=[11]),
             num_worker=dict(values=[8]),
 
-            fold=dict(values=[0]),
+            fold=dict(values=[0,1,2,3,4,5,6,7,8,9]),
             lr=dict(values=[0.0001]),
-            epoch=dict(values=[1]),
+            epoch=dict(values=[10]),
             batch_size=dict(values=[8]),
 
             decoder=dict(values=['FPN']),
@@ -65,7 +65,7 @@ def get_sweep_config(args):
             activation=dict(values=[None]),
             aux_params=dict(values=[None]),
 
-            criterion=dict(values=['dice']),
+            criterion=dict(values=['CE']),
             optimizer=dict(values=['Adam']),
             scheduler=dict(values=['multistep']),
         )
