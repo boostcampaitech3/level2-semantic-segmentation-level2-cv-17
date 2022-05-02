@@ -17,6 +17,7 @@ def leakage_list():
         af_files.add(af['file_name'])
 
     leak = be_files - af_files
+    print(len(leak))
     return leak
 
 def merge_json(leak,json_path):
@@ -32,42 +33,66 @@ def merge_json(leak,json_path):
     with open(json_path,'r') as f:
         merge_js = json.load(f)
 
+    print(len(js['images']))
+    print(len(js['annotations']))
+
     leak_files = []
     leak_files_id = []
     for data in js['images']:
         if data['file_name'] in leak:
-            leak_files_id.append(data['id'])
-
-            data['id'] = data['id']+merge_js['images'][-1]['id']+1
             leak_files.append(data)
-            
+            leak_files_id.append(data['id'])
 
     leak_annos = []
     for data in js['annotations']:
-        if data['image_id'] in leak_files_id:
-            data['id'] = data['id']+merge_js['annotations'][-1]['id']+1
-            data['image_id'] = data['image_id']+merge_js['images'][-1]['id']+1
+        if data['image_id'] in leak_files_id and data['category_id']!=0:
             leak_annos.append(data)
 
-    leak_files.sort(key = lambda x : x['id'])
-    leak_annos.sort(key = lambda x : x['image_id'])
+    js['images'] = leak_files
+    js['annotations'] = leak_annos
+
+    print(len(js['images']))
+    print(len(js['annotations']))
+
+    # leak_files = []
+    # leak_files_id = []
+    # for data in js['images']:
+    #     if data['file_name'] in leak:
+    #         leak_files_id.append(data['id'])
+
+    #         data['id'] = data['id']+merge_js['images'][-1]['id']+1
+    #         leak_files.append(data)
+            
+
+    # leak_annos = []
+    # for data in js['annotations']:
+    #     if data['image_id'] in leak_files_id and data['category_id']!=0:
+    #         data['id'] = data['id']+merge_js['annotations'][-1]['id']+1
+    #         data['image_id'] = data['image_id']+merge_js['images'][-1]['id']+1
+            
+    #         leak_annos.append(data)
+
+    # leak_files.sort(key = lambda x : x['id'])
+    # leak_annos.sort(key = lambda x : x['image_id'])
 
 
-    merge_js['images'].extend(leak_files)
-    merge_js['annotations'].extend(leak_annos)
-    # check len(merge_js['images']) == 195+ len(origin_images)
-    print(len(merge_js['images']))
-    print(merge_js['images'][-1])
-    print(len(merge_js['annotations']))
-    print(merge_js['annotations'][-1])
+    # merge_js['images'].extend(leak_files)
+    # merge_js['annotations'].extend(leak_annos)
+    # # check len(merge_js['images']) == 195+ len(origin_images)
+    # print(len(merge_js['images']))
+    # print(merge_js['images'][-1])
+    # print(len(merge_js['annotations']))
+    # print(merge_js['annotations'][-1])
 
-    tmp = json_path.split('.')
-    tmp[0] += '+leakage'
-    out_json_path = '.'.join(tmp)
-    with open(out_json_path,'w') as w:
-        json.dump(merge_js,w,indent=4)
+    # tmp = json_path.split('.')
+    # tmp[0] += '+leakage'
+    # out_json_path = '.'.join(tmp)
+    # with open(out_json_path,'w') as w:
+    #     json.dump(merge_js,w,indent=4)
+    with open('/opt/ml/input/data/leak.json','w') as w:
+        json.dump(js,w,indent=4)
 
 if __name__ =='__main__':
     leak = leakage_list()
     merge_json(leak,'/opt/ml/input/data/train.json')
-    merge_json(leak,'/opt/ml/input/data/train_all.json')
+    # merge_json(leak,'/opt/ml/input/data/train_all.json')
