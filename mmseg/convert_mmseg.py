@@ -66,4 +66,5 @@ if __name__ =='__main__' :
     main('/opt/ml/input/data/train.json')
     main('/opt/ml/input/data/val.json')
     main('/opt/ml/input/data/test.json')
+    main('/opt/ml/input/data/leak.json')
 
