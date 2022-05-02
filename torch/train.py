@@ -186,16 +186,17 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
 def main(args):
     set_seed(args.seed)
     args.work_dir_exp = get_exp_dir(args.work_dir)
-    args.dst_config = os.path.join(args.work_dir_exp, args.dst_config)
+    args.dst_config_dir = os.path.join(args.work_dir_exp, args.dst_config)
 
     if args.sweep:
         sweep_init(args)
-        args = concat_config(args, wandb.config) # args + wandb.config = args
+        args = concat_config(args, wandb.config) # args + wandb.config
     else:
         base_config = load_config(args)
-        args = concat_config(args, base_config) # args + base_config = args
+        args = concat_config(args, base_config) # args + base_config
 
     # all changes saved in args
+    # sweep parmas must not be changed
     args, (model, preprocessing_fn) = build_model(args) # smp_model.py
     args, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
     args, criterion = get_loss(args) # loss.py
@@ -204,6 +205,7 @@ def main(args):
     
     # args logged on wandb config
     if args.sweep:
+        wandb.run.name = get_wandb_run_name(args)
         wandb.config = args.__dict__
     else:
         wandb_init(args)

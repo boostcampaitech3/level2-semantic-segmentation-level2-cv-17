@@ -50,6 +50,7 @@ def concat_config(args, config):
 
     if config['mode'] == 'train':
         config['work_dir_exp'] = args.work_dir_exp
+        config['dst_config_dir'] = args.dst_config_dir
         config['save_interval'] = args.save_interval
         config['train_image_log'] = args.train_image_log
         config['valid_image_log'] = args.valid_image_log
@@ -65,7 +66,7 @@ def concat_config(args, config):
 
 
 def save_config(args):
-    with open(args.dst_config, 'w') as f:
+    with open(args.dst_config_dir, 'w') as f:
         yaml.safe_dump(args, f)
 
 
