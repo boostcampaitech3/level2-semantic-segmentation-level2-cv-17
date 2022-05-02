@@ -1,11 +1,18 @@
-epoch: 100
-batch_size: 8
-num_worker: 8
 classes: 11
+num_worker: 8
+
+fold: 0
 lr: 0.0001
-decoder: UnetPlusPlus # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
-encoder: timm-efficientnet-b4
+epoch: 1
+batch_size: 8
+
+decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
+encoder: timm-efficientnet-b4 # https://smp.readthedocs.io/en/latest/encoders.html
+encoder_depth: 5
 encoder_weights: imagenet # imagenet / advprop / noisy-student
+activation: None
+aux_params: None
+
 criterion: dice # dice / CE / focal / softCE
 optimizer: Adam # Adam / AdamW / SGD
 scheduler: multistep # multistep / reduce / cosign

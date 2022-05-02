@@ -26,49 +26,52 @@ def set_seed(seed):
 def get_exp_dir(work_dir):
     work_dir = work_dir.split('./')[-1]
     if not os.path.exists(os.path.join(os.getcwd(), work_dir)):
-        exp_dir = os.path.join(os.getcwd(), work_dir, 'exp_0')
+        exp_dir = os.path.join(os.getcwd(), work_dir, 'exp0')
     else:
         idx = 1
-        exp_dir = os.path.join(os.getcwd(), work_dir, f'exp_{idx}')
+        exp_dir = os.path.join(os.getcwd(), work_dir, f'exp{idx}')
         while os.path.exists(exp_dir):
             idx += 1
-            exp_dir = os.path.join(os.getcwd(), work_dir, f'exp_{idx}')
+            exp_dir = os.path.join(os.getcwd(), work_dir, f'exp{idx}')
     
     os.makedirs(exp_dir)
     return exp_dir
 
 
-def concat_config(arg, config):
+def concat_config(args, config):
     config = Munch(config)
-    
-    config['split'] = arg.split
-    config['seed'] = arg.seed
     config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
-    config['data_dir'] = arg.data_dir
-    config['work_dir'] = arg.work_dir
-    config['config_dir'] = arg.config_dir
+    config['mode'] = args.mode
+    config['seed'] = args.seed
+    config['data_dir'] = args.data_dir
+    config['work_dir'] = args.work_dir
+    config['src_config'] = args.src_config
+    config['dst_config'] = args.dst_config
 
-    if config['split'] == 'train':
-        exp_dir = get_exp_dir(arg.work_dir)
-        with open(os.path.join(exp_dir, 'config.yaml'), 'w') as f:
-            yaml.safe_dump(config, f)
-        config['work_dir_exp'] = exp_dir
-        config['viz_log'] = arg.viz_log
-        config['save_interval'] = arg.save_interval
-        config['check_train_data'] = arg.check_train_data
-
+    if config['mode'] == 'train':
+        config['work_dir_exp'] = args.work_dir_exp
+        config['save_interval'] = args.save_interval
+        config['train_image_log'] = args.train_image_log
+        config['valid_image_log'] = args.valid_image_log
+        config['wandb_remark'] = args.wandb_remark
+        config['sweep'] = args.sweep
+        config['sweep_name'] = args.sweep_name
+    
     else:
-        config['exp_name'] = arg.exp_name
-        config['model_name'] = arg.model_name
-        config['work_dir_exp'] = os.path.join(arg.work_dir, arg.exp_name)
+        config['ckpt_name'] = args.ckpt_name
+        config['save_remark'] = args.save_remark
     
     return config
 
 
+def save_config(args):
+    with open(args.dst_config, 'w') as f:
+        yaml.safe_dump(args, f)
+
+
 def load_config(args):
-    with open(args.config_dir, 'r') as f:
+    with open(args.src_config, 'r') as f:
         config = yaml.safe_load(f)
-    config = concat_config(args, config)
     return config
 
 
@@ -121,6 +124,7 @@ def add_hist(hist, label_trues, label_preds, n_class):
 def _fast_hist(label_true, label_pred, n_class):
     mask = (label_true >= 0) & (label_true < n_class)
     hist = np.bincount(
-        n_class * label_true[mask].astype(int) +
-        label_pred[mask], minlength=n_class ** 2).reshape(n_class, n_class)
+        n_class * label_true[mask].astype(int) + label_pred[mask],
+        minlength=n_class ** 2
+    ).reshape(n_class, n_class)
     return hist

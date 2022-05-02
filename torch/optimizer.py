@@ -1,13 +1,15 @@
 from utils import *
 
-def get_optimizer(optimizer, params, lr, scheduler):
+def get_optimizer(args, params):
 
-    if scheduler == 'cosign':
-        lr = 0
+    if args.scheduler == 'cosign':
+        args.lr = 0
 
-    if optimizer == 'Adam':
-        return torch.optim.Adam(params=params, lr=lr)
-    elif optimizer == 'AdamW':
-        return torch.optim.AdamW(params=params, lr=lr)
-    elif optimizer == 'SGD':
-        return torch.optim.SGD(params=params, lr=lr)
+    if args.optimizer == 'Adam':
+        optimizer = torch.optim.Adam(params=params, lr=args.lr)
+    elif args.optimizer == 'AdamW':
+        optimizer = torch.optim.AdamW(params=params, lr=args.lr)
+    elif args.optimizer == 'SGD':
+        optimizer = torch.optim.SGD(params=params, lr=args.lr)
+
+    return args, optimizer
