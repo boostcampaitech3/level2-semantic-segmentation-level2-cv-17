@@ -34,23 +34,23 @@ class_labels = {
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, default="train") # do not change
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--data-dir', type=str, default='/opt/ml/input/data/stratified_5fold')
+    parser.add_argument('--seed', type=int, default=42) # maybe do not change
 
+    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/stratified_5fold')
     parser.add_argument('--work-dir', type=str, default='./work_dirs') # do not change
-    parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # maybe do not change
-    parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # maybe do not change
+    parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # do not change
+    parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
     
-    parser.add_argument('--save-interval', type=int, default=10) # model save interval
-    parser.add_argument('--train-image-log', action='store_true', default=False) # if you want to see augmented image
-    parser.add_argument('--valid-image-log', action='store_true', default=True) # if you want to see evaluation image
-    parser.add_argument('--wandb-remark', type=str, default='', help='this will be added in wandb run name')
-
-    parser.add_argument('--sweep', action='store_true', default=False, help='sweep option')
-    parser.add_argument('--sweep-name', type=str, default='sweep', help='this will be sweep name and also run group name')
+    parser.add_argument('--save-interval', '-i', type=int, default=10, help='.pth save interval')
+    parser.add_argument('--train-image-log', '-t', action='store_true', default=False, help='if you want to see augmented image')
+    parser.add_argument('--valid-image-log', '-v', action='store_true', default=True, help='if you want to see evaluation image')
+    
+    parser.add_argument('--wandb-remark', '-r', type=str, default='', help='this will be added in wandb run name')
+    parser.add_argument('--sweep', action='store_true', default=False, help='sweep True')
+    parser.add_argument('--sweep-name', '-n', type=str, default='sweep', help='this will be sweep name and also group name')
 
     args = parser.parse_args()
-    args.src_config = os.path.join(os.getcwd(), args.src_config) # maybe do not change
+    args.src_config_dir = os.path.join(os.getcwd(), args.src_config) # maybe do not change
     return args
 
 
@@ -209,7 +209,7 @@ def main(args):
         wandb.config = args.__dict__
     else:
         wandb_init(args)
-    save_config(args) # args saved on train_config.yaml
+    save_config(args, args.dst_config_dir) # args saved on args.dst_config_dir
 
     do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler)
     if args.sweep: wandb.finish()

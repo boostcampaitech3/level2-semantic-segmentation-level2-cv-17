@@ -43,19 +43,19 @@ def get_sweep_config(args):
     # you must read this : https://docs.wandb.ai/guides/sweeps/configuration
     sweep_cfg = dict(
         name=args.sweep_name,
-        method='grid',
+        method='bayes',
         metric=dict(
             name='val/miou_score',
             goal='maximize'
         ))
     if sweep_cfg['method'] == 'grid':
         sweep_cfg['parameters'] = dict(
-            classes=dict(values=[11]),
-            num_worker=dict(values=[8]),
+            classes=dict(value=11),
+            num_worker=dict(value=8),
 
-            fold=dict(values=[0,1,2,3,4,5,6,7,8,9]),
+            fold=dict(values=[0]),
             lr=dict(values=[0.0001]),
-            epoch=dict(values=[10]),
+            epoch=dict(values=[20]),
             batch_size=dict(values=[8]),
 
             decoder=dict(values=['FPN']),
@@ -71,12 +71,12 @@ def get_sweep_config(args):
         )
     elif sweep_cfg['method'] == 'bayes':
         sweep_cfg['parameters'] = dict(
-            classes=dict(distribution='categorical', values=[11]),
-            num_worker=dict(distribution='categorical', values=[8]),
+            classes=dict(distribution='constant', value=11),
+            num_worker=dict(distribution='constant', value=8),
 
             fold=dict(distribution='categorical', values=[0]),
             lr=dict(distribution='categorical', values=[0.0001]),
-            epoch=dict(distribution='categorical', values=[1]),
+            epoch=dict(distribution='categorical', values=[20]),
             batch_size=dict(distribution='categorical', values=[8]),
 
             decoder=dict(distribution='categorical', values=['FPN']),

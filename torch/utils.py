@@ -37,20 +37,22 @@ def get_exp_dir(work_dir):
     os.makedirs(exp_dir)
     return exp_dir
 
-
+# config에 args 정보를 덮어 씌우고 config를 return
 def concat_config(args, config):
     config = Munch(config)
     config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
     config['mode'] = args.mode
     config['seed'] = args.seed
+
     config['data_dir'] = args.data_dir
     config['work_dir'] = args.work_dir
+    config['work_dir_exp'] = args.work_dir_exp
     config['src_config'] = args.src_config
+    config['src_config_dir'] = args.src_config_dir
     config['dst_config'] = args.dst_config
+    config['dst_config_dir'] = args.dst_config_dir
 
     if config['mode'] == 'train':
-        config['work_dir_exp'] = args.work_dir_exp
-        config['dst_config_dir'] = args.dst_config_dir
         config['save_interval'] = args.save_interval
         config['train_image_log'] = args.train_image_log
         config['valid_image_log'] = args.valid_image_log
@@ -60,20 +62,30 @@ def concat_config(args, config):
     
     else:
         config['ckpt_name'] = args.ckpt_name
+        config['ckpt_dir'] = args.ckpt_dir
         config['save_remark'] = args.save_remark
     
     return config
 
 
-def save_config(args):
-    with open(args.dst_config_dir, 'w') as f:
+def save_config(args, save_dir):
+    with open(save_dir, 'w') as f:
         yaml.safe_dump(args, f)
 
 
 def load_config(args):
-    with open(args.src_config, 'r') as f:
+    with open(args.src_config_dir, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+
+def maybe_apply_remark(dir, remark, extension):
+    if remark != '':
+        new_name = dir[:-len(extension)] + '_' + remark
+    else:
+        new_name = dir[:-len(extension)]
+    new_name += extension
+    return new_name
 
 
 def get_metrics(output, mask):

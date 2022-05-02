@@ -2,9 +2,6 @@ from utils import *
 
 
 def build_model(args):
-    # yaml 파일에서 None을 입력하면 'None'으로 받는 것 같습니다.
-    if args.activation == 'None': args.activation = None
-    if args.aux_params == 'None': args.aux_params = None
     decoder = getattr(smp, args.decoder)
     if args.decoder in ['Unet', 'UnetPlusPlus']:
         if args.mode == 'train':
