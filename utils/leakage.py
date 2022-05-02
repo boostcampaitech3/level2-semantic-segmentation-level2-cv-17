@@ -17,6 +17,7 @@ def leakage_list():
         af_files.add(af['file_name'])
 
     leak = be_files - af_files
+    leak.remove('batch_03/0259.jpg')
     return leak
 
 def filter_json(leak):
