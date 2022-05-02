@@ -24,6 +24,9 @@ def filter_json(leak):
 
     Args:
         leak (list): 195 leakge file names list
+
+    - initalize ['images']['id'] and ['annotations']['image_id'],['annotations']['id']
+    - remove 'UNKNOWN' category which category index == 0
     """
 
     with open('/opt/ml/input/data/data.json','r') as f:
@@ -31,14 +34,25 @@ def filter_json(leak):
 
     leak_files = []
     leak_files_id = []
+    leak_files_dict = dict()
+    a = 0
     for data in js['images']:
         if data['file_name'] in leak:
-            leak_files.append(data)
             leak_files_id.append(data['id'])
+            leak_files_dict[str(data['id'])] = a
+            data['id'] = a
+            a += 1
+            leak_files.append(data)
+            
+    print(leak_files_dict)
 
     leak_annos = []
+    b = 0
     for data in js['annotations']:
         if data['image_id'] in leak_files_id and data['category_id']!=0:
+            data['image_id'] = leak_files_dict[str(data['image_id'])]
+            data['id'] = b
+            b += 1
             leak_annos.append(data)
 
     js['images'] = leak_files
