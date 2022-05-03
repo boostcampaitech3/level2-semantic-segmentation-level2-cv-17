@@ -7,6 +7,7 @@ def main(arg):
         label_types = ["detections", "segmentations"],
         data_path=arg.data_dir,
         labels_path=arg.anno_dir,
+        include_id  =True
     )
     session = fo.launch_app(dataset, port=arg.port, address="0.0.0.0")
     session.wait()
