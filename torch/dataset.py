@@ -84,14 +84,21 @@ def load_dataset(args, preprocessing_fn):
     args, train_transform = get_train_transform(args, preprocessing_fn)
     args, val_transform = get_valid_transform(args, preprocessing_fn)
 
-    if args.fold != -1:
-        train_json_dir = os.path.join(args.data_dir, f"train_fold{args.fold}.json")
-        val_json_dir = os.path.join(args.data_dir, f"val_fold{args.fold}.json")
-    else: # use base train, val
-        train_json_dir = os.path.join(args.data_dir, "train.json")
+    train_json_dir = []
+    if args.fold == -1: # use base train, val
+        args.data_dir = '/opt/ml/input/data/'
+        train_json_dir.append(os.path.join(args.data_dir, "train.json"))
         val_json_dir = os.path.join(args.data_dir, "val.json")
+    else:
+        train_json_dir.append(os.path.join(args.data_dir, f"train_fold{args.fold}.json"))
+        val_json_dir = os.path.join(args.data_dir, f"val_fold{args.fold}.json")
     
-    train_dataset = CustomDataLoader(data_dir=train_json_dir, mode='train', transform=train_transform)
+    if len(args.add_train) != 0:
+        for i in args.add_train:
+            train_json_dir.append(i)
+    
+    train_dataset = [CustomDataLoader(data_dir=i, mode='train', transform=train_transform) for i in train_json_dir]
+    train_dataset = torch.utils.data.ConcatDataset(train_dataset)
     val_dataset = CustomDataLoader(data_dir=val_json_dir, mode='val', transform=val_transform)
 
     train_dataloader = torch.utils.data.DataLoader(
