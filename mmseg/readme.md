@@ -5,7 +5,7 @@
 - Virtual Environment
 
 ```
-conda create -n mmseg python=3.10 
+conda create -n mmseg python=3.8 # must
 conda activate mmseg
 ```
 - Install Packages ( Pytorch, MMCV )
