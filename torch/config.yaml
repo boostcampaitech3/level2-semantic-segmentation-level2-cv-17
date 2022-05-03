@@ -1,9 +1,18 @@
-epoch: 5
-batch_size: 8
-num_worker: 8
 classes: 11
+num_worker: 8
+
+fold: 0 # fold=-1 means base train, val
 lr: 0.0001
-decoder: UnetPlusPlus # Unet, UnetPlusPlus, DeepLabV3, DeepLabV3Plus
-encoder: timm-efficientnet-b4 # Segmentation Model 보는게 더 빠름
+epoch: 20
+batch_size: 8
+
+decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
+encoder: timm-efficientnet-b4 # https://smp.readthedocs.io/en/latest/encoders.html
+encoder_depth: 5
 encoder_weights: imagenet # imagenet / advprop / noisy-student
-criterion: dice # dice / CE / focal / softCE
+activation: # 빈칸(=None) / sigmoid / softmax / logsoftmax / tanh / identity
+aux_params: # 빈칸(=None) / https://smp.readthedocs.io/en/latest/models.html
+
+criterion: dice # CE / jaccard / dice / tversky / focal / lovasz / softCE
+optimizer: Adam # Adam / AdamW / SGD
+scheduler: multistep # multistep / reduce / cosign

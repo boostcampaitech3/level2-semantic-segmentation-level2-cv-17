@@ -4,13 +4,15 @@ import warnings
 import wandb
 
 from tqdm import tqdm
-from torch.optim import *
+from functools import partial
 
 from dataset import load_dataset
 from loss import get_loss
+from optimizer import get_optimizer
+from scheduler import get_scheduler
 from smp_model import build_model
 from utils import *
-from wandb_setup import wandb_login, wandb_init
+from wandb_setup import *
 
 warnings.filterwarnings('ignore')
 
@@ -31,61 +33,49 @@ class_labels = {
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--split', type=str, default="train")
-    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--mode', type=str, default="train") # do not change
+    parser.add_argument('--seed', type=int, default=42) # maybe do not change
 
-    parser.add_argument('--data-dir', default='/opt/ml/input/data')
-    parser.add_argument('--work_dir', type=str, default='./work_dirs')
-    parser.add_argument('--config-dir', type=str, default='./config.yaml')
+    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/stratified_5fold')
+    parser.add_argument('--work-dir', type=str, default='./work_dirs') # do not change
+    parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # do not change
+    parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
     
-    parser.add_argument('--viz-log', type=int, default=20)
-    parser.add_argument('--check_train_data', action='store_true', default=False)
-    parser.add_argument('--save-interval', default=5)
-    arg = parser.parse_args()
-    return arg
+    parser.add_argument('--save-interval', '-i', type=int, default=10, help='.pth save interval')
+    parser.add_argument('--train-image-log', '-t', action='store_true', default=False, help='if you want to see augmented image')
+    parser.add_argument('--valid-image-log', '-v', action='store_true', default=True, help='if you want to see evaluation image')
+    
+    parser.add_argument('--wandb-remark', '-r', type=str, default='', help='this will be added in wandb run name')
+    parser.add_argument('--sweep', action='store_true', default=False, help='sweep True')
+    parser.add_argument('--sweep-name', '-n', type=str, default='sweep', help='this will be sweep name and also group name')
+
+    args = parser.parse_args()
+    args.src_config_dir = os.path.join(os.getcwd(), args.src_config) # maybe do not change
+    return args
 
 
-def main():
-    args = get_parser()
-    args = load_config(args)
-    set_seed(args.seed)
-
-    model, preprocessing_fn = build_model(args)
-    train_loader, val_loader = load_dataset(args, preprocessing_fn)
+def do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler):
     model.to(args.device)
-    
-    criterion = get_loss(args.criterion)
-    optimizer = Adam(model.parameters(), lr=args.lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30, 45], gamma=0.1)
-
-    wandb_login()
-    wandb_init(args)
-    wandb.config = {
-        "learning_rate": args.lr,
-        "encoder": args.encoder,
-        "epochs": args.epoch,
-        "batch_size": args.batch_size
-    }
     wandb.watch(model)
 
-    device = args.device
-    best_loss = 9999999.0
-    best_score = 0.0
+    best_loss, best_loss_epoch = 9999999.0, 0
+    best_score, best_score_epoch = 0.0, 0
     
     for epoch in range(1, args.epoch + 1):
-        model.train()
+        # train
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
+
+        model.train()
         hist = np.zeros((args.classes, args.classes))
         pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
-        for idx, data in enumerate(pbar):
-            images, masks = data
-            images = torch.stack(images).float().to(device)
-            masks = torch.stack(masks).long().to(device)
+        for idx, (images, masks) in enumerate(pbar):
+            images = torch.stack(images).float().to(args.device)
+            masks = torch.stack(masks).long().to(args.device)
             output = model(images)
 
-            if args.check_train_data:
-                if idx == 0:
+            if args.train_image_log:
+                if idx in [0]:
                     batch_train_d = []
                     for train_img in images:
                         batch_train_d.append(wandb.Image(train_img))
@@ -95,9 +85,8 @@ def main():
             loss = criterion(output, masks)
             loss.backward()
             optimizer.step()
-
             train_loss += loss.item()
-
+            
             hist = add_hist(hist, masks, output, n_class=args.classes)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             train_miou_score += mIoU
@@ -108,34 +97,26 @@ def main():
             train_recall += recall.item()
             train_precision += precision.item()
             pbar.set_postfix(
-                Train_Loss=f" {train_loss / (idx+1):.3f}",
-                Train_Iou=f" {train_miou_score / (idx+1):.3f}",
-                Train_Acc=f" {train_accuracy / (idx+1):.3f}",
+                Train_Loss=f" {train_loss / (idx+1):.3f}", Train_Iou=f" {train_miou_score / (idx+1):.3f}", Train_Acc=f" {train_accuracy / (idx+1):.3f}",
             )
             
         wandb.log({
-            'train/loss': train_loss / len(train_loader),
-            'train/miou_score': train_miou_score / len(train_loader),
-            'train/accuracy': train_accuracy / len(train_loader),
-            'train/f1_score': train_f1_score / len(train_loader),
-            'train/recall': train_recall / len(train_loader),
-            'train/precision': train_precision / len(train_loader),
-            'learning_rate': scheduler.get_lr()[0],
+            'train/loss': train_loss / len(train_loader), 'train/miou_score': train_miou_score / len(train_loader), 'train/accuracy': train_accuracy / len(train_loader),
+            'train/f1_score': train_f1_score / len(train_loader), 'train/recall': train_recall / len(train_loader), 'train/precision': train_precision / len(train_loader),
         }, commit=False)
+        
 
-
-        scheduler.step()
-        val_loss, val_miou_score, val_accuracy = 0, 0, 0
-        val_f1_score, val_recall, val_precision = 0, 0, 0
-        val_iou_by_cls = [0] * 11
-        val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
+        # valid
         with torch.no_grad():
+            val_loss, val_miou_score, val_accuracy = 0, 0, 0
+            val_f1_score, val_recall, val_precision = 0, 0, 0
+
             model.eval()
             hist = np.zeros((args.classes, args.classes))
-            for idx, data in enumerate(val_pbar):
-                images, masks = data
-                images = torch.stack(images).float().to(device)
-                masks = torch.stack(masks).long().to(device)
+            val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
+            for idx, (images, masks) in enumerate(val_pbar):
+                images = torch.stack(images).float().to(args.device)
+                masks = torch.stack(masks).long().to(args.device)
                 output = model(images)
 
                 loss = criterion(output, masks)
@@ -151,65 +132,95 @@ def main():
                 val_recall += recall.item()
                 val_precision += precision.item()
                 val_pbar.set_postfix(
-                    Valid_Loss=f" {val_loss / (idx+1):.3f}",
-                    Valid_Iou=f" {val_miou_score / (idx+1):.3f}",
-                    Valid_Acc=f" {val_accuracy / (idx+1):.3f}",
+                    Valid_Loss=f" {val_loss / (idx+1):.3f}", Valid_Iou=f" {val_miou_score / (idx+1):.3f}", Valid_Acc=f" {val_accuracy / (idx+1):.3f}",
                 )
-
+                
                 output = torch.argmax(output, dim=1).detach().cpu().numpy()
-                if args.viz_log == idx:
-                    wandb.log({
-                        'visualize': wandb.Image(
-                            images[0, :, :, :],
-                            masks={
-                                "predictions": {
-                                    "mask_data": output[0, :, :],
-                                    "class_labels": class_labels
-                                },
-                                "ground_truth": {
-                                    "mask_data": masks[0, :, :].detach().cpu().numpy(),
-                                    "class_labels": class_labels
-                                }
-                            }
-                        )
-                    }, commit=False)
+                if args.valid_image_log:
+                    if idx in [20]:
+                        wandb.log({
+                            'visualize': wandb.Image(
+                                images[0, :, :, :],
+                                masks={"predictions": {"mask_data": output[0, :, :], "class_labels": class_labels},
+                                       "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
+                            )}, commit=False)
             
             IoU_by_class = [
-                {class_name:round(IoU,4)} for IoU,class_name in zip( IoU, list(class_labels.values()) )
+                {cls_name: round(IoU,4)} for IoU, cls_name in zip( IoU, list(class_labels.values()) )
             ]
+            for i, cls_name in class_labels.items():
+                wandb.log({f'cls/{str(i).zfill(2)} {cls_name}': IoU_by_class[i][cls_name]}, commit=False)
             
             wandb.log({
-                'val/loss': val_loss / len(val_loader),
-                'val/miou_score': val_miou_score / len(val_loader),
-                'val/accuracy': val_accuracy / len(val_loader),
-                'val/f1_score': val_f1_score / len(val_loader),
-                'val/recall': val_recall / len(val_loader),
-                'val/precision': val_precision / len(val_loader),
-                'cls/0 Background': IoU_by_class[0]['Background'],
-                'cls/1 General trash': IoU_by_class[1]['General trash'],
-                'cls/2 Paper': IoU_by_class[2]['Paper'],
-                'cls/3 Paper pack': IoU_by_class[3]['Paper pack'],
-                'cls/4 Metal': IoU_by_class[4]['Metal'],
-                'cls/5 Glass': IoU_by_class[5]['Glass'],
-                'cls/6 Plastic': IoU_by_class[6]['Plastic'],
-                'cls/7 Styrofoam': IoU_by_class[7]['Styrofoam'],
-                'cls/8 Plastic bag': IoU_by_class[8]['Plastic bag'],
-                'cls/9 Battery': IoU_by_class[9]['Battery'],
-                'cls/10 Clothing': IoU_by_class[10]['Clothing'],
-            })
-            
-        # save_model
+                'val/loss': val_loss / len(val_loader), 'val/miou_score': val_miou_score / len(val_loader), 'val/accuracy': val_accuracy / len(val_loader),
+                'val/f1_score': val_f1_score / len(val_loader), 'val/recall': val_recall / len(val_loader), 'val/precision': val_precision / len(val_loader),
+            }, commit=False)
+        
+        wandb.log({'learning_rate': scheduler.optimizer.param_groups[0]['lr']})
+
+        # scheduler step
+        if args.scheduler == 'reduce': scheduler.step(val_loss / len(val_loader))
+        else: scheduler.step()
+
+        # save model
         if best_score < val_miou_score:
-            best_score = val_miou_score
-            ckpt_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
-            torch.save(model.state_dict(), ckpt_path)
+            best_score, best_score_epoch = val_miou_score, epoch
+            best_score_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
+            torch.save(model.state_dict(), best_score_path)
         if best_loss > val_loss:
-            best_loss = val_loss
-            ckpt_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
+            best_loss, best_loss_epoch = val_loss, epoch
+            best_loss_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
+            torch.save(model.state_dict(), best_loss_path)
+        # and also every save_interval
+        if epoch % args.save_interval == 0:
+            ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
             torch.save(model.state_dict(), ckpt_path)
-        if (epoch + 1) % args.save_interval == 0:
-            ckpt_fpath = os.path.join(args.work_dir_exp, 'latest.pth')
-            torch.save(model.state_dict(), ckpt_fpath)
+        # best_loss, best_miou will get epoch info
+        if epoch == args.epoch:
+            new_best_score_path = best_score_path[:-4] + f"_epoch{best_score_epoch}.pth"
+            new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
+            os.rename(best_score_path, new_best_score_path)
+            os.rename(best_loss_path, new_best_loss_path)
+
+
+def main(args):
+    set_seed(args.seed)
+    args.work_dir_exp = get_exp_dir(args.work_dir)
+    args.dst_config_dir = os.path.join(args.work_dir_exp, args.dst_config)
+
+    if args.sweep:
+        sweep_init(args)
+        args = concat_config(args, wandb.config) # args + wandb.config
+    else:
+        base_config = load_config(args)
+        args = concat_config(args, base_config) # args + base_config
+
+    # all changes saved in args
+    # sweep parmas must not be changed
+    args, (model, preprocessing_fn) = build_model(args) # smp_model.py
+    args, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
+    args, criterion = get_loss(args) # loss.py
+    args, optimizer = get_optimizer(args, model.parameters()) # optimizer.py
+    args, scheduler = get_scheduler(args, optimizer) # scheduler.py
+    
+    # args logged on wandb config
+    if args.sweep:
+        wandb.run.name = get_wandb_run_name(args)
+        wandb.config = args.__dict__
+    else:
+        wandb_init(args)
+    save_config(args, args.dst_config_dir) # args saved on args.dst_config_dir
+
+    do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler)
+    if args.sweep: wandb.finish()
+
 
 if __name__ == "__main__":
-    main()
+    wandb_login()
+    args = get_parser()
+    if args.sweep:
+        sweep_config = get_sweep_config(args)
+        sweep_id = get_sweep_id(sweep_config)
+        wandb.agent(sweep_id, function=partial(main, args))
+    else:
+        main(args)
