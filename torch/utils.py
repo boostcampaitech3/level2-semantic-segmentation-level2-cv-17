@@ -55,8 +55,8 @@ def concat_config(args, config):
     if config['mode'] == 'train':
         config['add_train'] = args.add_train
         config['save_interval'] = args.save_interval
-        config['train_image_log'] = args.train_image_log
-        config['valid_image_log'] = args.valid_image_log
+        config['train_image'] = args.train_image
+        config['valid_image'] = args.valid_image
         config['wandb_remark'] = args.wandb_remark
         config['sweep'] = args.sweep
         config['sweep_name'] = args.sweep_name
