@@ -1,7 +1,7 @@
 classes: 11
 num_worker: 8
 
-fold: 0 # fold=-1 means base train, val
+fold: -1 # fold=-1 means base train, val
 lr: 0.0001
 epoch: 20
 batch_size: 8
@@ -13,6 +13,6 @@ encoder_weights: imagenet # imagenet / advprop / noisy-student
 activation: # 빈칸(=None) / sigmoid / softmax / logsoftmax / tanh / identity
 aux_params: # 빈칸(=None) / https://smp.readthedocs.io/en/latest/models.html
 
-criterion: dice # CE / jaccard / dice / tversky / focal / lovasz / softCE
+criterion: CE # CE / jaccard / dice / tversky / focal / lovasz / softCE
 optimizer: Adam # Adam / AdamW / SGD
 scheduler: multistep # multistep / reduce / cosign
