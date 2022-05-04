@@ -17,4 +17,9 @@ def get_loss(args):
     elif args.criterion == 'softCE':
         args.smooth_factor = 0.1
         criterion = smp.losses.SoftCrossEntropyLoss(smooth_factor=args.smooth_factor)
-    return args, criterion
+    # for class criterion
+    if args.cls_criterion == 'BCELogit':
+        cls_criterion = torch.nn.BCEWithLogitsLoss()
+    else:
+        cls_criterion = None
+    return args, criterion, cls_criterion

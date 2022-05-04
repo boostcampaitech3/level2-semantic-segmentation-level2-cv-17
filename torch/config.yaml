@@ -1,18 +1,23 @@
 classes: 11
 num_worker: 8
 
-fold: 0 # fold=-1 means base train, val
+fold: -1 # fold=-1 means base train, val
 lr: 0.0001
-epoch: 20
-batch_size: 8
+epoch: 50
+batch_size: 10
 
-decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
+decoder: UnetPlusPlus # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
 encoder: timm-efficientnet-b4 # https://smp.readthedocs.io/en/latest/encoders.html
 encoder_depth: 5
 encoder_weights: imagenet # imagenet / advprop / noisy-student
 activation: # 빈칸(=None) / sigmoid / softmax / logsoftmax / tanh / identity
 aux_params: # 빈칸(=None) / https://smp.readthedocs.io/en/latest/models.html
+  pooling: avg # avg, max
+  dropout: 0.5 # dropout ratio, default is None
+  activation: sigmoid  # activation function, default is None
+  classes: 11 # define number of output labels   
+cls_criterion: BCELogit # for aux_cls
 
-criterion: dice # CE / jaccard / dice / tversky / focal / lovasz / softCE
+criterion: softCE # CE / jaccard / dice / tversky / focal / lovasz / softCE
 optimizer: Adam # Adam / AdamW / SGD
-scheduler: multistep # multistep / reduce / cosign
+scheduler: reduce # multistep / reduce / cosign

@@ -47,21 +47,25 @@ class CustomDataLoader(torch.utils.data.Dataset):
             # 각각의 pixel 값에는 "category id" 할당
             # Background = 0
             masks = np.zeros((image_infos["height"], image_infos["width"]))
+            labels = np.zeros(len(self.CLASSES))
             # General trash = 1, ... , Cigarette = 10
             anns = sorted(anns, key=lambda idx: len(idx['segmentation'][0]), reverse=False)
 
             for i in range(len(anns)):
                 class_name = get_classname(anns[i]['category_id'], cats)
                 pixel_value = self.CLASSES.index(class_name)
+                labels[pixel_value] = 1
                 masks[self.coco.annToMask(anns[i]) == 1] = pixel_value
             masks = masks.astype(np.int8)
+            labels = labels.astype(np.int8)
+            labels = torch.from_numpy(labels)
 
             # transform -> albumentations 라이브러리 활용
             if self.transform is not None:
                 transformed = self.transform(image=images, mask=masks)
                 images = transformed["image"]
                 masks = transformed["mask"]
-            return images, masks
+            return images, masks, labels
 
         if self.mode == 'test':
             # transform -> albumentations 라이브러리 활용
