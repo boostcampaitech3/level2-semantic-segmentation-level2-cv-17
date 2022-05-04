@@ -55,25 +55,30 @@ def get_parser():
     return args
 
 
-def do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler):
+def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, scheduler):
     model.to(args.device)
     wandb.watch(model)
 
     best_loss, best_loss_epoch = 9999999.0, 0
     best_score, best_score_epoch = 0.0, 0
-    
+
     for epoch in range(1, args.epoch + 1):
         # train
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
+        train_mask_loss, train_cls_loss = 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
 
         model.train()
         hist = np.zeros((args.classes, args.classes))
         pbar = tqdm(train_loader, total=len(train_loader), desc=f"[Epoch {epoch}] Train")
-        for idx, (images, masks) in enumerate(pbar):
+        for idx, (images, masks, labels) in enumerate(pbar):
             images = torch.stack(images).float().to(args.device)
             masks = torch.stack(masks).long().to(args.device)
-            output = model(images)
+            labels = torch.stack(labels).float().to(args.device)
+            if args.aux_params:
+                output, output_label = model(images)
+            else:
+                output = model(images)
 
             if args.train_image_log:
                 if idx in [0]:
@@ -84,9 +89,16 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
 
             optimizer.zero_grad()
             loss = criterion(output, masks)
-            loss.backward()
+            if args.aux_params:
+                loss_label = cls_criterion(output_label, labels)
+                train_cls_loss += loss_label.item()
+                total_loss = loss + loss_label
+            else:
+                total_loss = loss
+            total_loss.backward()
             optimizer.step()
-            train_loss += loss.item()
+            train_mask_loss += loss.item()
+            train_loss += total_loss.item()
             
             hist = add_hist(hist, masks, output, n_class=args.classes)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
@@ -104,25 +116,38 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
         wandb.log({
             'train/loss': train_loss / len(train_loader), 'train/miou_score': train_miou_score / len(train_loader), 'train/accuracy': train_accuracy / len(train_loader),
             'train/f1_score': train_f1_score / len(train_loader), 'train/recall': train_recall / len(train_loader), 'train/precision': train_precision / len(train_loader),
+            'train/mask_loss': train_mask_loss / len(train_loader), 'train/cls_loss': train_cls_loss / len(train_loader)
         }, commit=False)
         
 
         # valid
         with torch.no_grad():
             val_loss, val_miou_score, val_accuracy = 0, 0, 0
+            val_mask_loss, val_cls_loss = 0, 0
             val_f1_score, val_recall, val_precision = 0, 0, 0
 
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
-            for idx, (images, masks) in enumerate(val_pbar):
+            for idx, (images, masks, labels) in enumerate(val_pbar):
                 images = torch.stack(images).float().to(args.device)
                 masks = torch.stack(masks).long().to(args.device)
-                output = model(images)
+                labels = torch.stack(labels).float().to(args.device)
+                if args.aux_params:
+                    output, output_label = model(images)
+                else:
+                    output = model(images)
 
                 loss = criterion(output, masks)
-                val_loss += loss.item()
-                
+                if args.aux_params:
+                    loss_label = cls_criterion(output_label, labels)
+                    val_cls_loss += loss_label.item()
+                    total_val_loss = loss + loss_label
+                else:
+                    total_val_loss = loss
+                val_mask_loss += loss.item()
+                val_loss += total_val_loss.item()
+                             
                 hist = add_hist(hist, masks, output, n_class=args.classes)
                 acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
                 val_miou_score += mIoU
@@ -155,6 +180,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
             wandb.log({
                 'val/loss': val_loss / len(val_loader), 'val/miou_score': val_miou_score / len(val_loader), 'val/accuracy': val_accuracy / len(val_loader),
                 'val/f1_score': val_f1_score / len(val_loader), 'val/recall': val_recall / len(val_loader), 'val/precision': val_precision / len(val_loader),
+                'val/mask_loss': val_mask_loss / len(val_loader), 'val/cls_loss': val_cls_loss / len(val_loader)
             }, commit=False)
         
         wandb.log({'learning_rate': scheduler.optimizer.param_groups[0]['lr']})
@@ -200,7 +226,7 @@ def main(args):
     # sweep parmas must not be changed
     args, (model, preprocessing_fn) = build_model(args) # smp_model.py
     args, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
-    args, criterion = get_loss(args) # loss.py
+    args, criterion, cls_criterion = get_loss(args) # loss.py
     args, optimizer = get_optimizer(args, model.parameters()) # optimizer.py
     args, scheduler = get_scheduler(args, optimizer) # scheduler.py
     
@@ -212,7 +238,7 @@ def main(args):
         wandb_init(args)
     save_config(args, args.dst_config_dir) # args saved on args.dst_config_dir
 
-    do_train(args, model, train_loader, val_loader, optimizer, criterion, scheduler)
+    do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, scheduler)
     if args.sweep: wandb.finish()
 
 
