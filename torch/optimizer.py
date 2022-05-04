@@ -3,6 +3,7 @@ from utils import *
 def get_optimizer(args, params):
 
     if args.scheduler == 'cosign':
+        args.scheduler_lr_max = args.lr
         args.lr = 0
 
     if args.optimizer == 'Adam':

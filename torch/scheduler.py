@@ -71,7 +71,7 @@ def get_scheduler(args, optimizer):
     elif args.scheduler == 'cosign':
         args.scheduler_cycle = max(1, int(args.epoch/4))
         args.scheduler_cycle_coef = 1
-        args.scheduler_lr_max = 0.1
+        # args.scheduler_lr_max = 0.1 # moved to optimizer.py
         args.scheduler_warmup = max(1, int(args.epoch/16))
         args.scheduler_gamma = 0.1
         scheduler = CosineAnnealingWarmUpRestarts(optimizer, T_0=args.scheduler_cycle, T_mult=args.scheduler_cycle_coef,

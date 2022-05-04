@@ -43,8 +43,8 @@ def get_parser():
     parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
     
     parser.add_argument('--save-interval', '-i', type=int, default=10, help='.pth save interval')
-    parser.add_argument('--train-image-log', action='store_true', default=False, help='if you want to see augmented image')
-    parser.add_argument('--valid-image-log', action='store_true', default=True, help='if you want to see evaluation image')
+    parser.add_argument('--train-image', '-t', action='store_true', default=False, help='if you want to see augmented image')
+    parser.add_argument('--valid-image', '-v', action='store_true', default=True, help='if you want to see evaluation image')
     
     parser.add_argument('--wandb-remark', '-r', type=str, default='', help='this will be added in wandb run name')
     parser.add_argument('--sweep', action='store_true', default=False, help='sweep True')
@@ -80,13 +80,6 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             else:
                 output = model(images)
 
-            if args.train_image_log:
-                if idx in [0]:
-                    batch_train_d = []
-                    for train_img in images:
-                        batch_train_d.append(wandb.Image(train_img))
-                    wandb.log({'train_image':batch_train_d}, commit=False)
-
             optimizer.zero_grad()
             loss = criterion(output, masks)
             if args.aux_params:
@@ -112,6 +105,17 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             pbar.set_postfix(
                 Train_Loss=f" {train_loss / (idx+1):.3f}", Train_Iou=f" {train_miou_score / (idx+1):.3f}", Train_Acc=f" {train_accuracy / (idx+1):.3f}",
             )
+
+            if args.train_image:
+                if idx in [0]:
+                    batch_img = []
+                    for train_img in images.detach().cpu().numpy():
+                        train_img = np.transpose(train_img, (1,2,0))
+                        if args.norm:
+                            train_img = (train_img * args.norm_std) + args.norm_mean
+                            train_img = np.clip(train_img*255, 0, 255)
+                        batch_img.append(wandb.Image(train_img))
+                    wandb.log({'train_image':batch_img}, commit=False)
             
         wandb.log({
             'train/loss': train_loss / len(train_loader), 'train/miou_score': train_miou_score / len(train_loader), 'train/accuracy': train_accuracy / len(train_loader),
@@ -125,7 +129,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             val_loss, val_miou_score, val_accuracy = 0, 0, 0
             val_mask_loss, val_cls_loss = 0, 0
             val_f1_score, val_recall, val_precision = 0, 0, 0
-
+            
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
@@ -160,13 +164,18 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
                 val_pbar.set_postfix(
                     Valid_Loss=f" {val_loss / (idx+1):.3f}", Valid_Iou=f" {val_miou_score / (idx+1):.3f}", Valid_Acc=f" {val_accuracy / (idx+1):.3f}",
                 )
-                
-                output = torch.argmax(output, dim=1).detach().cpu().numpy()
-                if args.valid_image_log:
-                    if idx in [20]:
+
+                if args.valid_image:
+                    if idx in [19,23,25,35,42,47,58,63]:
+                        valid_img = images[0, :, :, :].detach().cpu().numpy()
+                        valid_img = np.transpose(valid_img, (1,2,0))
+                        if args.norm:
+                            valid_img = (valid_img * args.norm_std) + args.norm_mean
+                            valid_img = np.clip(valid_img*255, 0, 255)
+                        output = torch.argmax(output, dim=1).detach().cpu().numpy()
                         wandb.log({
-                            'visualize': wandb.Image(
-                                images[0, :, :, :],
+                            f'visualize_{str(idx).zfill(2)}': wandb.Image(
+                                valid_img,
                                 masks={"predictions": {"mask_data": output[0, :, :], "class_labels": class_labels},
                                        "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
                             )}, commit=False)
@@ -208,6 +217,9 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
             os.rename(best_score_path, new_best_score_path)
             os.rename(best_loss_path, new_best_loss_path)
+            if args.epoch < args.save_interval:
+                ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
+                torch.save(model.state_dict(), ckpt_path)
 
 
 def main(args):
