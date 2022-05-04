@@ -115,7 +115,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
         with torch.no_grad():
             val_loss, val_miou_score, val_accuracy = 0, 0, 0
             val_f1_score, val_recall, val_precision = 0, 0, 0
-
+            
             model.eval()
             hist = np.zeros((args.classes, args.classes))
             val_pbar = tqdm(val_loader, total=len(val_loader), desc=f"[Epoch {epoch}] Valid")
@@ -141,7 +141,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
                 )
 
                 if args.valid_image:
-                    if idx in [20]:
+                    if idx in [19,23,25,35,42,47,58,63]:
                         valid_img = images[0, :, :, :].detach().cpu().numpy()
                         valid_img = np.transpose(valid_img, (1,2,0))
                         if args.norm:
@@ -149,7 +149,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
                             valid_img = np.clip(valid_img*255, 0, 255)
                         output = torch.argmax(output, dim=1).detach().cpu().numpy()
                         wandb.log({
-                            'visualize': wandb.Image(
+                            f'visualize_{str(idx).zfill(2)}': wandb.Image(
                                 valid_img,
                                 masks={"predictions": {"mask_data": output[0, :, :], "class_labels": class_labels},
                                        "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
@@ -191,6 +191,9 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, schedu
             new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
             os.rename(best_score_path, new_best_score_path)
             os.rename(best_loss_path, new_best_loss_path)
+            if args.epoch < args.save_interval:
+                ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
+                torch.save(model.state_dict(), ckpt_path)
 
 
 def main(args):
