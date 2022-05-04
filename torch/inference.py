@@ -61,7 +61,10 @@ def main():
     pbar = tqdm(test_dataloader, total=len(test_dataloader), desc=f"Test")
     with torch.no_grad():
         for idx, (images, image_infos) in enumerate(pbar):
-            output = model(torch.stack(images).float().to(args.device))
+            if args.aux_params:
+                output, output_label = model(torch.stack(images).float().to(args.device))
+            else:
+                output = model(torch.stack(images).float().to(args.device))
             oms = torch.argmax(output.squeeze(), dim=1).detach().cpu().numpy()
 
             temp_mask = []
