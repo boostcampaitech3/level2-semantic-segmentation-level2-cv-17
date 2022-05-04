@@ -43,7 +43,7 @@ def concat_config(args, config):
     config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
     config['mode'] = args.mode
     config['seed'] = args.seed
-
+    
     config['data_dir'] = args.data_dir
     config['work_dir'] = args.work_dir
     config['work_dir_exp'] = args.work_dir_exp
@@ -53,6 +53,7 @@ def concat_config(args, config):
     config['dst_config_dir'] = args.dst_config_dir
 
     if config['mode'] == 'train':
+        config['add_train'] = args.add_train
         config['save_interval'] = args.save_interval
         config['train_image_log'] = args.train_image_log
         config['valid_image_log'] = args.valid_image_log

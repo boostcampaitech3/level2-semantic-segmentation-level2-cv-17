@@ -18,6 +18,6 @@ aux_params: # 빈칸(=None) / https://smp.readthedocs.io/en/latest/models.html
   classes: 11 # define number of output labels   
 cls_criterion: BCELogit # for aux_cls
 
-criterion: softCE # CE / jaccard / dice / tversky / focal / lovasz / softCE
+criterion: CE # CE / jaccard / dice / tversky / focal / lovasz / softCE
 optimizer: Adam # Adam / AdamW / SGD
 scheduler: reduce # multistep / reduce / cosign

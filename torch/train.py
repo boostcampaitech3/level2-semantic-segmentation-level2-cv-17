@@ -36,14 +36,15 @@ def get_parser():
     parser.add_argument('--mode', type=str, default="train") # do not change
     parser.add_argument('--seed', type=int, default=42) # maybe do not change
 
-    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/')
+    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/stratified_5fold')
+    parser.add_argument('--add-train', '-a', type=str, nargs='+', default=['/opt/ml/input/data/leak.json'])
     parser.add_argument('--work-dir', type=str, default='./work_dirs') # do not change
     parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # do not change
     parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
     
     parser.add_argument('--save-interval', '-i', type=int, default=10, help='.pth save interval')
-    parser.add_argument('--train-image-log', '-t', action='store_true', default=False, help='if you want to see augmented image')
-    parser.add_argument('--valid-image-log', '-v', action='store_true', default=True, help='if you want to see evaluation image')
+    parser.add_argument('--train-image-log', action='store_true', default=False, help='if you want to see augmented image')
+    parser.add_argument('--valid-image-log', action='store_true', default=True, help='if you want to see evaluation image')
     
     parser.add_argument('--wandb-remark', '-r', type=str, default='', help='this will be added in wandb run name')
     parser.add_argument('--sweep', action='store_true', default=False, help='sweep True')
