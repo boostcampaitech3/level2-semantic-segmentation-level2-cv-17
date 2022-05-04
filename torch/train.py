@@ -2,7 +2,8 @@ import argparse
 import warnings
 
 import wandb
-
+import pandas as pd
+import seaborn as sns
 from tqdm import tqdm
 from functools import partial
 
@@ -15,6 +16,10 @@ from utils import *
 from wandb_setup import *
 
 warnings.filterwarnings('ignore')
+
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+rcParams['figure.figsize'] = 15,15 # wandb image 크기 조절
 
 class_labels = {
     0: "Background",
@@ -105,7 +110,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             pbar.set_postfix(
                 Train_Loss=f" {train_loss / (idx+1):.3f}", Train_Iou=f" {train_miou_score / (idx+1):.3f}", Train_Acc=f" {train_accuracy / (idx+1):.3f}",
             )
-
+            
             if args.train_image:
                 if idx in [0]:
                     batch_img = []
@@ -180,6 +185,11 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
                                        "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
                             )}, commit=False)
             
+            norm_hist = np.array(hist)/hist.sum()
+            df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))
+            wandb.log({'confusion_matrix': wandb.Image(sns.heatmap(df_hist, annot=True))}, commit=False)
+            plt.clf() # clean figure
+
             IoU_by_class = [
                 {cls_name: round(IoU,4)} for IoU, cls_name in zip( IoU, list(class_labels.values()) )
             ]
