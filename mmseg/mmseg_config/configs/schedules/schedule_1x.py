@@ -14,10 +14,11 @@ optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 
 # learning policy
 lr_config = dict(
-        policy='CosineAnnealing',
+        policy='Step',
         warmup='linear',
         warmup_iters=500, 
-        warmup_ratio=0.01,
+        warmup_ratio=0.001,
+        step = [30, 50],
         min_lr=1e-05,
     )
 runner = dict(type='EpochBasedRunner', max_epochs=100)
