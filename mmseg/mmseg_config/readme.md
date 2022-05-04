@@ -96,8 +96,9 @@ usage: test.py [-h] [--aug-test] [--cfg-options CFG_OPTIONS [CFG_OPTIONS ...]] [
 mmseg test (and eval) a model
 
 positional arguments:
+  exp                   experiment directory path. (EX) exp62
   config                test config file path. (EX) pspnet.py
-  checkpoint            checkpoint file. (EX) exp9/epoch_45.pth
+  checkpoint            checkpoint file. (EX) epoch_45.pth
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -122,6 +123,6 @@ optional arguments:
 
 ### Test command
 - basic  
-`python test.py pspnet.py exp9/epoch_45.pth`
+`python test.py exp9 pspnet.py epoch_45.pth`
 - more example  
-`python test.py pspnet.py exp9/epoch_45.pth --cfg-options data.test.piepline.1.img_scale="(224,224)" `
+`python test.py exp9 pspnet.py epoch_45.pth --cfg-options data.test.piepline.1.img_scale="(224,224)" `

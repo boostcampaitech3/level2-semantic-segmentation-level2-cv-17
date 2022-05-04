@@ -29,8 +29,9 @@ warnings.filterwarnings(action='ignore')
 def parse_args():
     parser = argparse.ArgumentParser(
         description='mmseg test (and eval) a model')
+    parser.add_argument('exp',help='experiment directory path. (EX) exp62')
     parser.add_argument('config',help='test config file path. (EX) pspnet.py')
-    parser.add_argument('checkpoint',help='checkpoint file. (EX) exp9/epoch_45.pth')
+    parser.add_argument('checkpoint',help='checkpoint file. (EX) epoch_45.pth')
     parser.add_argument(
         '--aug-test', action='store_true', help='Use Flip and Multi scale aug')
 
@@ -55,11 +56,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    config_root = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/mmseg/mmseg_config/configs/_base_'
     checkpoint_root = '/opt/ml/input/level2-semantic-segmentation-level2-cv-17/mmseg/mmseg_config/work_dirs'
+    c_root = os.path.join(checkpoint_root,args.exp)
 
-
-    cfg = mmcv.Config.fromfile(os.path.join(config_root,args.config))
+    cfg = mmcv.Config.fromfile(os.path.join(c_root,args.config))
 
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
@@ -118,7 +118,7 @@ def main():
         wrap_fp16_model(model)
 
     # checkpoint load
-    load_checkpoint(model, os.path.join(checkpoint_root,args.checkpoint), map_location='cpu')
+    load_checkpoint(model, os.path.join(c_root,args.checkpoint), map_location='cpu')
 
     # clean gpu memory when starting a new evaluation.
     torch.cuda.empty_cache()
@@ -162,7 +162,7 @@ def main():
         sub_name = args.checkpoint[:-4] +'_'+ args.remark +'.csv'
     else:
         sub_name = args.checkpoint[:-4] + '.csv'
-    submission_path = os.path.join(checkpoint_root,sub_name)
+    submission_path = os.path.join(c_root,sub_name)
 
     submission.to_csv(submission_path, index=False)
 
