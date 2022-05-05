@@ -184,11 +184,24 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
                                 masks={"predictions": {"mask_data": output[0, :, :], "class_labels": class_labels},
                                        "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
                             )}, commit=False)
-            
-            norm_hist = np.array(hist)/hist.sum()
+           
+            hist = np.array(hist).astype('float')
+            with np.errstate(divide='ignore', invalid='ignore'): norm_hist = hist / np.array([hist.sum(axis=1)]).T
             df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))
-            wandb.log({'confusion_matrix': wandb.Image(sns.heatmap(df_hist, annot=True))}, commit=False)
-            plt.clf() # clean figure
+            cm = sns.heatmap(df_hist, annot=True, linewidths=.5, annot_kws={"size": 10})
+            plt.title('confusion_matrix_true')
+            plt.xlabel('Pred')
+            plt.ylabel('True')
+            wandb.log({'confusion_matrix_true': wandb.Image(cm)}, commit=False)
+            plt.clf()
+            with np.errstate(divide='ignore', invalid='ignore'): norm_hist = hist / hist.sum(axis=0)
+            df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))
+            cm = sns.heatmap(df_hist, annot=True, linewidths=.5, annot_kws={"size": 10})
+            plt.title('confusion_matrix_pred')
+            plt.xlabel('Pred')
+            plt.ylabel('True')
+            wandb.log({'confusion_matrix_pred': wandb.Image(cm)}, commit=False)
+            plt.clf()
 
             IoU_by_class = [
                 {cls_name: round(IoU,4)} for IoU, cls_name in zip( IoU, list(class_labels.values()) )
