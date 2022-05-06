@@ -89,6 +89,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             loss = criterion(output, masks)
             if args.aux_params:
                 loss_label = cls_criterion(output_label, labels)
+                # loss_label *= 10
                 train_cls_loss += loss_label.item()
                 total_loss = loss + loss_label
             else:
@@ -189,7 +190,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             with np.errstate(divide='ignore', invalid='ignore'): norm_hist = hist / np.array([hist.sum(axis=1)]).T
             df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))
             cm = sns.heatmap(df_hist, annot=True, linewidths=.5, annot_kws={"size": 10})
-            plt.title('confusion_matrix_true')
+            plt.title(f'confusion_matrix_true_epoch{epoch}')
             plt.xlabel('Pred')
             plt.ylabel('True')
             wandb.log({'confusion_matrix_true': wandb.Image(cm)}, commit=False)
@@ -197,7 +198,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             with np.errstate(divide='ignore', invalid='ignore'): norm_hist = hist / hist.sum(axis=0)
             df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))
             cm = sns.heatmap(df_hist, annot=True, linewidths=.5, annot_kws={"size": 10})
-            plt.title('confusion_matrix_pred')
+            plt.title(f'confusion_matrix_pred_epoch{epoch}')
             plt.xlabel('Pred')
             plt.ylabel('True')
             wandb.log({'confusion_matrix_pred': wandb.Image(cm)}, commit=False)
@@ -226,10 +227,10 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             best_score, best_score_epoch = val_miou_score, epoch
             best_score_path = os.path.join(args.work_dir_exp, 'best_miou.pth')
             torch.save(model.state_dict(), best_score_path)
-        if best_loss > val_loss:
-            best_loss, best_loss_epoch = val_loss, epoch
-            best_loss_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
-            torch.save(model.state_dict(), best_loss_path)
+        # if best_loss > val_loss:
+        #     best_loss, best_loss_epoch = val_loss, epoch
+        #     best_loss_path = os.path.join(args.work_dir_exp, 'best_loss.pth')
+        #     torch.save(model.state_dict(), best_loss_path)
         # and also every save_interval
         if epoch % args.save_interval == 0:
             ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
@@ -237,9 +238,9 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
         # best_loss, best_miou will get epoch info
         if epoch == args.epoch:
             new_best_score_path = best_score_path[:-4] + f"_epoch{best_score_epoch}.pth"
-            new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
+            # new_best_loss_path = best_loss_path[:-4] + f"_epoch{best_loss_epoch}.pth"
             os.rename(best_score_path, new_best_score_path)
-            os.rename(best_loss_path, new_best_loss_path)
+            # os.rename(best_loss_path, new_best_loss_path)
             if args.epoch < args.save_interval:
                 ckpt_path = os.path.join(args.work_dir_exp, f'epoch{epoch}.pth')
                 torch.save(model.state_dict(), ckpt_path)

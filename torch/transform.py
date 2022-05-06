@@ -1,6 +1,6 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-
+import cv2
 '''
 A.HorizontalFlip()
 A.VerticalFlip()
@@ -27,6 +27,24 @@ def get_train_transform(args, preprocessing_fn):
     
     transform = []
     transform.append(A.Resize(512, 512))
+    # transform.append(A.OneOf([
+    #     A.Flip(),
+    #     A.HorizontalFlip(),
+    #     A.RandomRotate90(),
+    # ]))
+    # transform.append(A.OneOf([
+    #     A.RandomBrightness(),
+    #     A.RandomContrast(),
+    #     A.RandomBrightnessContrast(),
+    # ]))
+    # transform.append(A.OneOf([
+    #     A.OpticalDistortion(),
+    #     A.GridDistortion(),
+    # ]))
+    # transform.append(A.OneOf([
+    #     A.Emboss(),
+    #     A.IAAEmboss(),
+    # ]))
     if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
     if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
     transform.append(ToTensorV2())
