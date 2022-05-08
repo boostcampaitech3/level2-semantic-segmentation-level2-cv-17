@@ -26,25 +26,35 @@ def get_train_transform(args, preprocessing_fn):
     args.norm_std = [0.2072837, 0.20495638, 0.2134382]
     
     transform = []
-    transform.append(A.Resize(512, 512))
     # transform.append(A.OneOf([
-    #     A.Flip(),
-    #     A.HorizontalFlip(),
-    #     A.RandomRotate90(),
-    # ]))
+    #     A.CropNonEmptyMaskIfExists(384,384, p=0.8),
+    #     A.RandomResizedCrop(384,384, p=0.2),
+    # ], p=1.0))
     # transform.append(A.OneOf([
-    #     A.RandomBrightness(),
-    #     A.RandomContrast(),
-    #     A.RandomBrightnessContrast(),
-    # ]))
-    # transform.append(A.OneOf([
-    #     A.OpticalDistortion(),
-    #     A.GridDistortion(),
-    # ]))
-    # transform.append(A.OneOf([
-    #     A.Emboss(),
-    #     A.IAAEmboss(),
-    # ]))
+    #     A.PadIfNeeded(512,512, border_mode=cv2.BORDER_CONSTANT),
+    #     A.Resize(512,512),
+    # ], p=1.0))
+    transform.append(A.OneOf([
+        A.HorizontalFlip(),
+        A.VerticalFlip(),
+    ]))
+    transform.append(A.OneOf([
+        A.ShiftScaleRotate(),
+        A.RandomRotate90(),
+    ]))
+    transform.append(A.OneOf([
+        A.RandomBrightness(),
+        A.RandomContrast(),
+        A.RandomBrightnessContrast(),
+    ]))
+    transform.append(A.OneOf([
+        A.OpticalDistortion(),
+        A.GridDistortion(),
+    ]))
+    transform.append(A.OneOf([
+        A.Emboss(),
+        A.IAAEmboss(),
+    ]))
     if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
     if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
     transform.append(ToTensorV2())
@@ -52,15 +62,6 @@ def get_train_transform(args, preprocessing_fn):
 
 
 def get_valid_transform(args, preprocessing_fn):
-    transform = []
-    transform.append(A.Resize(512, 512))
-    if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
-    if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
-    transform.append(ToTensorV2())
-    return args, A.Compose(transform)
-
-
-def get_test_transform(args, preprocessing_fn):
     transform = []
     transform.append(A.Resize(512, 512))
     if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))

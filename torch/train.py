@@ -41,14 +41,14 @@ def get_parser():
     parser.add_argument('--mode', type=str, default="train") # do not change
     parser.add_argument('--seed', type=int, default=42) # maybe do not change
 
-    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/stratified_5fold')
+    parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/')
     parser.add_argument('--add-train', '-a', type=str, nargs='+', default=['/opt/ml/input/data/leak.json'])
     parser.add_argument('--work-dir', type=str, default='./work_dirs') # do not change
     parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # do not change
     parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
     
     parser.add_argument('--save-interval', '-i', type=int, default=10, help='.pth save interval')
-    parser.add_argument('--train-image', '-t', action='store_true', default=False, help='if you want to see augmented image')
+    parser.add_argument('--train-image', '-t', action='store_true', default=True, help='if you want to see augmented image')
     parser.add_argument('--valid-image', '-v', action='store_true', default=True, help='if you want to see evaluation image')
     
     parser.add_argument('--wandb-remark', '-r', type=str, default='', help='this will be added in wandb run name')
@@ -178,14 +178,14 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
                         if args.norm:
                             valid_img = (valid_img * args.norm_std) + args.norm_mean
                             valid_img = np.clip(valid_img*255, 0, 255)
-                        output = torch.argmax(output, dim=1).detach().cpu().numpy()
+                        output_argmax = torch.argmax(output, dim=1).detach().cpu().numpy()
                         wandb.log({
                             f'visualize_{str(idx).zfill(2)}': wandb.Image(
                                 valid_img,
-                                masks={"predictions": {"mask_data": output[0, :, :], "class_labels": class_labels},
+                                masks={"predictions": {"mask_data": output_argmax[0, :, :], "class_labels": class_labels},
                                        "ground_truth": {"mask_data": masks[0, :, :].detach().cpu().numpy(), "class_labels": class_labels}}
                             )}, commit=False)
-           
+            
             hist = np.array(hist).astype('float')
             with np.errstate(divide='ignore', invalid='ignore'): norm_hist = hist / np.array([hist.sum(axis=1)]).T
             df_hist = pd.DataFrame(norm_hist, index=list(class_labels.values()), columns=list(class_labels.values()))

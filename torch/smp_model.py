@@ -34,12 +34,12 @@ def build_model(args):
             decoder_pab_channels=args.decoder_pab_channels,
         )
     elif args.decoder == 'FPN':
-        if args.mode == 'train':
-            args['decoder_pyramid_channels'] = 256
-            args['decoder_segmentation_channels'] = 128
-            args['decoder_merge_policy'] = 'add'
-            args['decoder_dropout'] = 0.2
-            args['upsampling'] = 4
+        # if args.mode == 'train':
+        #     args['decoder_pyramid_channels'] = 256
+        #     args['decoder_segmentation_channels'] = 128
+        #     args['decoder_merge_policy'] = 'add'
+        #     args['decoder_dropout'] = 0.2
+        #     args['upsampling'] = 4
         model = decoder(
             classes=args.classes,
             encoder_name=args.encoder,

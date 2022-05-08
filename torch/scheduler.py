@@ -61,8 +61,8 @@ class CosineAnnealingWarmUpRestarts(torch.optim.lr_scheduler._LRScheduler):
 
 def get_scheduler(args, optimizer):
     if args.scheduler == 'multistep':
-        args.scheduler_milestones = [max(1, int(args.epoch*(1/2))), max(2, int(args.epoch*(3/4))), max(3, int(args.epoch*(7/8)))]
-        args.scheduler_gamma = 0.5
+        # args.scheduler_milestones = [max(1, int(args.epoch*(1/2))), max(2, int(args.epoch*(3/4))), max(3, int(args.epoch*(7/8)))]
+        # args.scheduler_gamma = 0.5
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.scheduler_milestones, gamma=args.scheduler_gamma)
     elif args.scheduler == 'reduce':
         args.scheduler_factor = 0.1

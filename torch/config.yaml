@@ -1,23 +1,39 @@
 classes: 11
 num_worker: 8
 
-fold: -1 # fold=-1 means base train, val
+fold: -1 # if fold==-1, return train.json val.json
+train_json: train.json
+val_json: val.json
+
 lr: 0.0001
-epoch: 8
+epoch: 20
 batch_size: 8
 
-decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
 encoder: tu-tf_efficientnetv2_l_in21k  # https://smp.readthedocs.io/en/latest/encoders.html
 encoder_depth: 5
 encoder_weights: imagenet # imagenet / advprop / noisy-student
+
+decoder: FPN # Unet, UnetPlusPlus, MAnet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus
+decoder_pyramid_channels: 256
+decoder_segmentation_channels: 256
+decoder_merge_policy: 'add'
+decoder_dropout: 0.2
+
+upsampling: 4
 activation: # 빈칸(=None) / sigmoid / softmax / logsoftmax / tanh / identity
 aux_params: # 빈칸(=None) / https://smp.readthedocs.io/en/latest/models.html
   pooling: avg # avg, max
-  dropout: 0.2 # dropout ratio, default is None
+  dropout: 0.4 # dropout ratio, default is None
   activation: # activation function, default is None
-  classes: 11 # define number of output labels   
-cls_criterion: BCELogit # for aux_cls
+  classes: 11 # define number of output labels
+
+optimizer: Adam # Adam / AdamW / SGD
 
 criterion: CE # CE / jaccard / dice / tversky / focal / lovasz / softCE
-optimizer: Adam # Adam / AdamW / SGD
+cls_criterion: BCELogit # for aux_cls
+class_weights: [0.0146, 0.0948, 0.0502, 0.1144, 0.1153, 0.1065, 0.0567, 0.1077, 0.0481, 0.154, 0.1378]
+pos_weights: [0.015, 0.2535, 0.0675, 1.0695, 0.924, 0.8535, 0.228, 0.432, 0.0645, 9.255, 1.8405]
+
 scheduler: multistep # multistep / reduce / cosign
+scheduler_milestones: [8, 12, 16]
+scheduler_gamma: 0.5
