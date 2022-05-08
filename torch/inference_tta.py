@@ -44,8 +44,8 @@ def main():
     model.to(args.device)
     model.eval()
 
-    args.TTA_flip_list = ['NoOp', 'HorizontalFlip', 'VerticalFlip']
-    args.TTA_size_list = [512]
+    args.TTA_flip_list = ['NoOp'] # 'NoOp' 'HorizontalFlip' 'VerticalFlip'
+    args.TTA_size_list = [384, 448, 512]
 
     # ex. pth : best_miou_epoch1.pth
     # -> yaml : test_config_best_miou_epoch1_{args.save_remark}.yaml
@@ -61,7 +61,6 @@ def main():
             test_transform = []
             test_transform.append(A.Resize(tta_size, tta_size))
             test_transform.append(getattr(A, tta_flip)(p=1.0))
-            test_transform.append(A.PadIfNeeded(512,512, border_mode=cv2.BORDER_CONSTANT))
             test_transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
             test_transform.append(ToTensorV2())
             test_dataset = CustomDataLoader(data_dir=os.path.join(args.data_dir, 'test.json'), mode='test', transform=A.Compose(test_transform))
@@ -84,9 +83,6 @@ def main():
                     sub_transform.append(A.Resize(256, 256, interpolation=cv2.INTER_AREA)) # 이미지 축소 시, 보통 cv2.INTER_AREA 사용
                     
                     images = torch.stack(images).float().detach().cpu().numpy()
-                    pad_value = int((512 - tta_size)/2)
-                    images = images[:, :, pad_value:512-pad_value, pad_value:512-pad_value]
-                    oms = oms[:, pad_value:512-pad_value, pad_value:512-pad_value]
 
                     temp_mask = []
                     for img, mask in zip(images, oms):
@@ -106,10 +102,19 @@ def main():
     sub_array = np.empty((0, 256*256), dtype=np.long)
     
     # TTA 경우의 수에 맞게끔 바꿔주시면 됩니다.
-    if len(TTA_preds_array) == 2:
+    if len(TTA_preds_array) == 1:
+        for i in TTA_preds_array:
+            sub_array = np.vstack((sub_array, i))
+    elif len(TTA_preds_array) == 2:
         pred1, pred2 = TTA_preds_array
         for p1,p2 in zip(pred1, pred2):
             tta_list = [p1.tolist(), p2.tolist()]
+            count_list = max(tta_list, key=tta_list.count)
+            sub_array = np.vstack((sub_array, count_list))
+    elif len(TTA_preds_array) == 3:
+        pred1, pred2, pred3 = TTA_preds_array
+        for p1,p2,p3 in zip(pred1, pred2, pred3):
+            tta_list = [p1.tolist(), p2.tolist(), p3.tolist()]
             count_list = max(tta_list, key=tta_list.count)
             sub_array = np.vstack((sub_array, count_list))
     elif len(TTA_preds_array) == 4:
