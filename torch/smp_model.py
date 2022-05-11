@@ -106,8 +106,8 @@ def build_model(args):
             upsampling=args.upsampling,
         )
     
-    preprocessing_fn = smp.encoders.get_preprocessing_fn(args.encoder, args.encoder_weights)
-    
+    preprocessing_fn = smp.encoders.get_preprocessing_fn(args.encoder, args.encoder_weights) 
+
     if args.mode == 'train':
         return args, (model, preprocessing_fn)
     elif args.mode == 'test':

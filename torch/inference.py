@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from dataset import CustomDataLoader, collate_fn
 from smp_model import build_model
 from utils import *
-from transform import get_test_transform
+from transform import get_valid_transform
 
 
 def get_parser():
@@ -40,7 +40,7 @@ def main():
     set_seed(args.seed)
     
     model, preprocessing_fn = build_model(args) # smp_model.py
-    args, test_transform = get_test_transform(args, preprocessing_fn) # transform.py
+    args, test_transform = get_valid_transform(args, preprocessing_fn) # transform.py
     test_dataset = CustomDataLoader(data_dir=os.path.join(args.data_dir, 'test.json'), mode='test', transform=test_transform)
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=args.num_worker, pin_memory=True, collate_fn=collate_fn)
     model.load_state_dict(torch.load(args.ckpt_dir))
@@ -58,6 +58,7 @@ def main():
     file_name_list = []
     preds_array = np.empty((0, size * size), dtype=np.long)
 
+    output_list = []
     pbar = tqdm(test_dataloader, total=len(test_dataloader), desc=f"Test")
     with torch.no_grad():
         for idx, (images, image_infos) in enumerate(pbar):
@@ -65,6 +66,7 @@ def main():
                 output, output_label = model(torch.stack(images).float().to(args.device))
             else:
                 output = model(torch.stack(images).float().to(args.device))
+            
             oms = torch.argmax(output.squeeze(), dim=1).detach().cpu().numpy()
 
             temp_mask = []
@@ -79,6 +81,8 @@ def main():
             preds_array = np.vstack((preds_array, oms))
 
             file_name_list.append([i['file_name'] for i in image_infos])
+
+            output_list.append(output)
         
         file_names = [y for x in file_name_list for y in x]
 
@@ -93,6 +97,8 @@ def main():
     save_csv_dir = maybe_apply_remark(args.ckpt_dir, args.save_remark, '.csv')
     submission.to_csv(save_csv_dir, index=False)
 
+    save_npy_dir = maybe_apply_remark(args.ckpt_dir, args.save_remark, '.npy')
+    np.save(save_npy_dir, torch.cat(output_list, dim=0).detach().cpu().numpy())
 
 if __name__ == "__main__":
     main()

@@ -42,7 +42,10 @@ def get_parser():
     parser.add_argument('--seed', type=int, default=42) # maybe do not change
 
     parser.add_argument('--data-dir', '-d', type=str, default='/opt/ml/input/data/')
-    parser.add_argument('--add-train', '-a', type=str, nargs='+', default=['/opt/ml/input/data/leak.json'])
+    parser.add_argument('--add-train', '-a', type=str, nargs='+', default=['/opt/ml/input/data/leak.json',
+                                                                           '/opt/ml/input/data/val_clean.json',
+                                                                        #    '/opt/ml/input/data/hyo_7941.json'
+                                                                           ])
     parser.add_argument('--work-dir', type=str, default='./work_dirs') # do not change
     parser.add_argument('--src-config', type=str, default='config.yaml', help='Base config') # do not change
     parser.add_argument('--dst-config', type=str, default='train_config.yaml', help='Save config') # do not change
@@ -60,7 +63,7 @@ def get_parser():
     return args
 
 
-def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, scheduler):
+def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, sub_criterion, scheduler):
     model.to(args.device)
     wandb.watch(model)
 
@@ -70,7 +73,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
     for epoch in range(1, args.epoch + 1):
         # train
         train_loss, train_miou_score, train_accuracy = 0, 0, 0
-        train_mask_loss, train_cls_loss = 0, 0
+        train_mask_loss, train_cls_loss, train_sub_loss = 0, 0, 0
         train_f1_score, train_recall, train_precision = 0, 0, 0
 
         model.train()
@@ -87,17 +90,19 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
 
             optimizer.zero_grad()
             loss = criterion(output, masks)
+            train_mask_loss += loss.item()
+            total_loss = loss
             if args.aux_params:
                 loss_label = cls_criterion(output_label, labels)
-                # loss_label *= 10
                 train_cls_loss += loss_label.item()
-                total_loss = loss + loss_label
-            else:
-                total_loss = loss
+                total_loss += loss_label
+            if args.sub_criterion:
+                loss_sub = sub_criterion(output, masks)
+                train_sub_loss += loss_sub.item()
+                total_loss += loss_sub
+            train_loss += total_loss.item()
             total_loss.backward()
             optimizer.step()
-            train_mask_loss += loss.item()
-            train_loss += total_loss.item()
             
             hist = add_hist(hist, masks, output, n_class=args.classes)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
@@ -126,14 +131,14 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
         wandb.log({
             'train/loss': train_loss / len(train_loader), 'train/miou_score': train_miou_score / len(train_loader), 'train/accuracy': train_accuracy / len(train_loader),
             'train/f1_score': train_f1_score / len(train_loader), 'train/recall': train_recall / len(train_loader), 'train/precision': train_precision / len(train_loader),
-            'train/mask_loss': train_mask_loss / len(train_loader), 'train/cls_loss': train_cls_loss / len(train_loader)
+            'train/mask_loss': train_mask_loss / len(train_loader), 'train/cls_loss': train_cls_loss / len(train_loader), 'train/sub_loss': train_sub_loss / len(train_loader),
         }, commit=False)
         
 
         # valid
         with torch.no_grad():
             val_loss, val_miou_score, val_accuracy = 0, 0, 0
-            val_mask_loss, val_cls_loss = 0, 0
+            val_mask_loss, val_cls_loss, val_sub_loss = 0, 0, 0
             val_f1_score, val_recall, val_precision = 0, 0, 0
             
             model.eval()
@@ -149,13 +154,16 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
                     output = model(images)
 
                 loss = criterion(output, masks)
+                val_mask_loss += loss.item()
+                total_val_loss = loss
                 if args.aux_params:
                     loss_label = cls_criterion(output_label, labels)
                     val_cls_loss += loss_label.item()
-                    total_val_loss = loss + loss_label
-                else:
-                    total_val_loss = loss
-                val_mask_loss += loss.item()
+                    total_val_loss += loss_label
+                if args.sub_criterion:
+                    loss_sub = sub_criterion(output, masks)
+                    val_sub_loss += loss_sub.item()
+                    total_val_loss += loss_sub
                 val_loss += total_val_loss.item()
                              
                 hist = add_hist(hist, masks, output, n_class=args.classes)
@@ -213,7 +221,7 @@ def do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_cr
             wandb.log({
                 'val/loss': val_loss / len(val_loader), 'val/miou_score': val_miou_score / len(val_loader), 'val/accuracy': val_accuracy / len(val_loader),
                 'val/f1_score': val_f1_score / len(val_loader), 'val/recall': val_recall / len(val_loader), 'val/precision': val_precision / len(val_loader),
-                'val/mask_loss': val_mask_loss / len(val_loader), 'val/cls_loss': val_cls_loss / len(val_loader)
+                'val/mask_loss': val_mask_loss / len(val_loader), 'val/cls_loss': val_cls_loss / len(val_loader), 'val/sub_loss': val_sub_loss / len(val_loader),
             }, commit=False)
         
         wandb.log({'learning_rate': scheduler.optimizer.param_groups[0]['lr']})
@@ -261,8 +269,9 @@ def main(args):
     # all changes saved in args
     # sweep parmas must not be changed
     args, (model, preprocessing_fn) = build_model(args) # smp_model.py
+    if args.ckpt_dir: model.load_state_dict(torch.load(args.ckpt_dir))
     args, (train_loader, val_loader) = load_dataset(args, preprocessing_fn) # datasat.py
-    args, criterion, cls_criterion = get_loss(args) # loss.py
+    args, criterion, cls_criterion, sub_criterion = get_loss(args) # loss.py
     args, optimizer = get_optimizer(args, model.parameters()) # optimizer.py
     args, scheduler = get_scheduler(args, optimizer) # scheduler.py
     
@@ -274,7 +283,7 @@ def main(args):
         wandb_init(args)
     save_config(args, args.dst_config_dir) # args saved on args.dst_config_dir
 
-    do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, scheduler)
+    do_train(args, model, train_loader, val_loader, optimizer, criterion, cls_criterion, sub_criterion, scheduler)
     if args.sweep: wandb.finish()
 
 
