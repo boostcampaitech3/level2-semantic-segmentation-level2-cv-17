@@ -1,5 +1,5 @@
 from utils import *
-
+from models.custom_swin_pan import register_encoder
 
 def build_model(args):
     decoder = getattr(smp, args.decoder)
@@ -105,6 +105,21 @@ def build_model(args):
             decoder_atrous_rates=args.decoder_atrous_rates,
             upsampling=args.upsampling,
         )
+    elif args.decoder == 'PAN': # swin 적용을 위한 PAN
+        if args.encoder == 'swin':
+            register_encoder()
+        if args.mode == 'train':
+            args['encoder_output_stride'] = 32
+            args['in_channels'] = 3
+        model = decoder(
+			classes=args.classes,
+            encoder_name=args.encoder,
+            encoder_weights=args.encoder_weights,
+            activation=args.activation,
+            aux_params=args.aux_params,
+            encoder_output_stride=args.encoder_output_stride,
+            in_channels=args.in_channels,
+		)
     
     preprocessing_fn = smp.encoders.get_preprocessing_fn(args.encoder, args.encoder_weights)
     
