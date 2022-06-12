@@ -90,9 +90,8 @@ def load_dataset(args, preprocessing_fn):
 
     train_json_dir = []
     if args.fold == -1: # use base train, val
-        args.data_dir = '/opt/ml/input/data/'
-        train_json_dir.append(os.path.join(args.data_dir, "train.json"))
-        val_json_dir = os.path.join(args.data_dir, "val.json")
+        train_json_dir.append(os.path.join(args.data_dir, args.train_json))
+        val_json_dir = os.path.join(args.data_dir, args.val_json)
     else:
         train_json_dir.append(os.path.join(args.data_dir, f"train_fold{args.fold}.json"))
         val_json_dir = os.path.join(args.data_dir, f"val_fold{args.fold}.json")

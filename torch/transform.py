@@ -1,6 +1,6 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-
+import cv2
 '''
 A.HorizontalFlip()
 A.VerticalFlip()
@@ -25,27 +25,38 @@ def get_train_transform(args, preprocessing_fn):
     args.norm_mean = [0.46470487, 0.44357692, 0.42242742]
     args.norm_std = [0.2072837, 0.20495638, 0.2134382]
     
-    transform = []
-    transform.append(A.Resize(512, 512))
-    if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
-    if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
-    transform.append(ToTensorV2())
+    transform = [
+        A.OneOf([
+            A.CropNonEmptyMaskIfExists(384, 384),
+        ], p=0.5),
+        A.Resize(384, 384, interpolation=cv2.INTER_AREA),
+        A.OneOf([
+            A.HorizontalFlip(),
+            A.VerticalFlip(),
+        ], p=0.67),
+        A.OneOf([
+            A.ShiftScaleRotate(),
+            A.RandomRotate90(),
+        ], p=0.67),
+        A.RandomBrightnessContrast(p=0.5),
+        A.OneOf([
+            A.OpticalDistortion(),
+            A.GridDistortion(),
+        ], p=0.67),
+        A.OneOf([
+            A.Emboss(),
+            A.IAAEmboss(),
+            A.Sharpen(),
+        ], p=0.75),
+        A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0),
+        ToTensorV2()
+    ]
     return args, A.Compose(transform)
 
 
 def get_valid_transform(args, preprocessing_fn):
     transform = []
     transform.append(A.Resize(512, 512))
-    if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
-    if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
-    transform.append(ToTensorV2())
-    return args, A.Compose(transform)
-
-
-def get_test_transform(args, preprocessing_fn):
-    transform = []
-    transform.append(A.Resize(512, 512))
-    if args.norm: transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
-    if not args.norm: transform.append(A.Lambda(image=preprocessing_fn))
+    transform.append(A.Normalize(mean=args.norm_mean, std=args.norm_std, max_pixel_value=1.0))
     transform.append(ToTensorV2())
     return args, A.Compose(transform)

@@ -64,7 +64,7 @@ def main(arg):
     print('End conversion.')
     
     print('saving a json file...')
-    with open(arg.dst_json, "w") as json_file:
+    with open(arg.sub_csv[:-3]+'json', "w") as json_file:
         json.dump(test_js, json_file, indent=4)
 
 if __name__ == "__main__":
@@ -72,8 +72,8 @@ if __name__ == "__main__":
     parser.add_argument('--sub_csv', '-s', type=str,
                         default='/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/work_dirs/exp_19/best_miou_epoch55.csv',
                         help='submission csv path')
-    parser.add_argument('--dst_json', '-d', type=str,
-                        default='/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/work_dirs/exp_19/best_miou_epoch55.json',
-                        help='inference json path')
+    # parser.add_argument('--dst_json', '-d', type=str,
+    #                     default='/opt/ml/input/level2-semantic-segmentation-level2-cv-17/torch/work_dirs/exp_19/best_miou_epoch55.json',
+    #                     help='inference json path')
     args = parser.parse_args()
     main(args)
